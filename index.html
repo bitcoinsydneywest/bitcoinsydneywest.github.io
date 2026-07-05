@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitcoin Sydney West</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#07080a;
+    --surface:#101217;
+    --surface-2:#15181e;
+    --orange:#f7931a;
+    --amber:#ffb84d;
+    --ink:#f5f1e8;
+    --ink-dim:#9a9ea6;
+    --line:#23262d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #net{
+    position:fixed;
+    top:0; left:0;
+    width:100vw; height:100vh;
+    z-index:0;
+    display:block;
+  }
+  .content{ position:relative; z-index:1; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--orange);
+    display:flex;
+    align-items:center;
+    gap:0.6em;
+    margin-bottom:1.1rem;
+  }
+  .eyebrow::before{
+    content:"";
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--orange);
+    box-shadow:0 0 8px 2px rgba(247,147,26,0.7);
+    flex:none;
+  }
+
+  h1,h2,h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    line-height:1.05;
+    letter-spacing:-0.01em;
+  }
+
+  section{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:6rem 1.5rem;
+    text-align:center;
+  }
+
+  /* HERO */
+  #hero-collapse{
+    pointer-events:none;
+    will-change:transform, opacity;
+    transform-origin:center center;
+    z-index:5;
+  }
+  #hero-collapse-spacer{ visibility:hidden; }
+  #genesis-space{ height:8rem; }
+  #hero h1{
+    font-size:clamp(2.6rem, 7vw, 5.2rem);
+    color:var(--ink);
+  }
+  #hero h1 span{ color:var(--orange); }
+  #hero p.tag{
+    font-size:clamp(1rem, 1.6vw, 1.25rem);
+    color:var(--ink-dim);
+    max-width:34rem;
+    margin:1.4rem auto 2.6rem;
+    font-weight:400;
+  }
+  .btn-row{ display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.88rem;
+    letter-spacing:0.03em;
+    padding:0.95rem 1.8rem;
+    border-radius:2px;
+    text-decoration:none;
+    display:inline-block;
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+    border:1px solid transparent;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn-primary{
+    background:var(--orange);
+    color:#100b04;
+    font-weight:600;
+    box-shadow:0 0 0 rgba(247,147,26,0);
+  }
+  .btn-primary:hover{ box-shadow:0 6px 26px -6px rgba(247,147,26,0.6); }
+  .btn-ghost{
+    border-color:var(--line);
+    color:var(--ink);
+    background:rgba(255,255,255,0.02);
+  }
+  .btn-ghost:hover{ border-color:var(--orange); color:var(--orange); }
+
+  .scroll-cue{
+    position:absolute;
+    bottom:2.4rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0.5rem;
+    opacity:0.6;
+  }
+  .scroll-cue .stem{
+    width:1px; height:34px;
+    background:linear-gradient(var(--orange), transparent);
+    animation:pulseDown 1.8s ease-in-out infinite;
+  }
+  @keyframes pulseDown{
+    0%,100%{ opacity:0.2; transform:scaleY(0.7); }
+    50%{ opacity:1; transform:scaleY(1); }
+  }
+
+  /* PANEL SECTIONS (readable over the network) */
+  .panel{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .panel-inner{ max-width:44rem; }
+  .panel h2, .panel p, .panel .eyebrow, .panel .ledger div, .panel .lede{
+    text-shadow:0 2px 16px rgba(7,8,10,0.85), 0 1px 3px rgba(7,8,10,0.9);
+  }
+
+  /* ETHOS */
+  #ethos h2{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:1.6rem; }
+  .ethos-photo{
+    display:block;
+    width:100%;
+    max-width:28rem;
+    margin:0 auto 1.8rem;
+    border-radius:8px;
+    border:1px solid var(--line);
+  }
+  #ethos p.lede{
+    color:var(--ink-dim);
+    font-size:1.05rem;
+    max-width:36rem;
+    margin:0 auto 2.6rem;
+    line-height:1.6;
+  }
+  .ledger{
+    text-align:left;
+    display:inline-grid;
+    grid-template-columns:1fr 1fr;
+    gap:0.6rem 3rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.92rem;
+  }
+  .ledger div{ display:flex; align-items:center; gap:0.65rem; }
+  .ledger .no{ color:#5c6067; text-decoration:line-through; }
+  .ledger .no::before{ content:"✕"; color:#5c6067; }
+  .ledger .yes{ color:var(--ink); }
+  .ledger .yes::before{ content:"✓"; color:var(--orange); }
+
+  /* MEETUP */
+  #meetup .eyebrow{ justify-content:center; }
+  #meetup h2{ font-size:clamp(1.6rem, 3.4vw, 2.1rem); color:var(--ink-dim); font-weight:500; margin-bottom:2.2rem;}
+  .countdown{
+    display:flex;
+    gap:clamp(0.5rem, 3vw, 1.6rem);
+    font-family:'IBM Plex Mono', monospace;
+    flex-wrap:nowrap;
+    justify-content:center;
+    margin-bottom:2rem;
+    width:100%;
+  }
+  .countdown .unit{ min-width:0; flex:0 1 auto; }
+  .countdown .num{
+    font-size:clamp(1.4rem, 6vw, 3.6rem);
+    color:var(--orange);
+    font-weight:600;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .countdown .lbl{
+    font-size:clamp(0.55rem, 1.6vw, 0.68rem);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-top:0.5rem;
+    white-space:nowrap;
+  }
+  .meetup-loc{ color:var(--ink-dim); font-size:0.95rem; margin-top:0.6rem; }
+  .meetup-loc b{ color:var(--ink); font-weight:500; }
+  .venue-map{
+    width:100%;
+    max-width:32rem;
+    margin:2rem auto 0;
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .venue-map > div{
+    width:100%;
+    height:16rem;
+    background:#0b0d10;
+  }
+  .venue-address{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.78rem;
+    color:var(--ink-dim);
+    margin-top:0.8rem;
+  }
+  .leaflet-container{ background:#0b0d10 !important; font-family:'Inter', sans-serif !important; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip{
+    background:var(--surface) !important;
+    color:var(--ink) !important;
+  }
+
+  /* JOIN */
+  #join h2{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:1.2rem; }
+  #join p{ color:var(--ink-dim); max-width:30rem; margin-bottom:2.2rem; line-height:1.6; }
+
+  /* SUPPORT / DONATE */
+  #support h2{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:1.2rem; }
+  #support > p{ color:var(--ink-dim); max-width:30rem; margin-bottom:2.6rem; line-height:1.6; }
+  .donate-cards{
+    display:flex; gap:1.6rem; flex-wrap:wrap; justify-content:center;
+  }
+  .donate-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:1.8rem;
+    width:15.5rem;
+  }
+  .donate-card .qr{
+    background:#f5f1e8;
+    padding:0.7rem;
+    border-radius:4px;
+    display:inline-block;
+    margin-bottom:1rem;
+  }
+  .donate-card .qr img, .donate-card .qr canvas{ display:block; }
+  .donate-card .label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--orange);
+    margin-bottom:0.6rem;
+  }
+  .donate-card .addr{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    color:var(--ink-dim);
+    word-break:break-all;
+    line-height:1.5;
+  }
+
+  footer{
+    padding:3.5rem 1.5rem 3rem;
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.75rem;
+    color:#5c6067;
+    letter-spacing:0.02em;
+  }
+  footer a{ color:var(--ink-dim); text-decoration:none; }
+  footer a:hover{ color:var(--orange); }
+
+  .code-modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(5,6,7,0.78);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:1.5rem;
+  }
+  .code-modal-overlay.open{ display:flex; }
+  .code-modal{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:2.2rem 1.8rem;
+    max-width:22rem;
+    width:100%;
+    text-align:center;
+  }
+  .code-modal h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:1.35rem;
+    margin:0.6rem 0 0.7rem;
+  }
+  .code-modal-sub{
+    color:var(--ink-dim);
+    font-size:0.85rem;
+    line-height:1.55;
+    margin-bottom:1.4rem;
+  }
+  #code-input{
+    width:100%;
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:1.7rem;
+    letter-spacing:0.5em;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:4px;
+    color:var(--ink);
+    padding:0.75rem 0;
+    outline:none;
+  }
+  #code-input:focus{ border-color:var(--orange); }
+  .code-error{
+    color:#ff8577;
+    font-size:0.8rem;
+    margin-top:0.9rem;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+</style>
+</head>
+<body>
+
+<canvas id="net"></canvas>
+
+<div class="content">
+
+  <section id="hero">
+    <div id="hero-collapse">
+      <div class="eyebrow">NODE: WESTERN SYDNEY</div>
+      <h1>Bitcoin <span>Sydney West</span></h1>
+    </div>
+    <div id="hero-collapse-spacer"></div>
+    <div id="genesis-space" aria-hidden="true"></div>
+    <p class="tag">A local, Bitcoin-only meetup for Western Sydney. No altcoins, no hype, no noise - just people getting closer to sound money and to each other.</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="#" id="signal-btn-hero">Join the Signal group →</a>
+    </div>
+    <div class="eyebrow" style="justify-content:center; margin-top:2rem; margin-bottom:0;">Next meetup</div>
+    <div class="meetup-loc">Next meetup at <b>Bella Vista Hotel</b> in:</div>
+    <div class="countdown" id="countdown" style="margin-top:0.8rem;">
+      <div class="unit"><div class="num" id="cd-days">00</div><div class="lbl">Days</div></div>
+      <div class="unit"><div class="num" id="cd-hours">00</div><div class="lbl">Hours</div></div>
+      <div class="unit"><div class="num" id="cd-mins">00</div><div class="lbl">Mins</div></div>
+      <div class="unit"><div class="num" id="cd-secs">00</div><div class="lbl">Secs</div></div>
+    </div>
+    <div class="scroll-cue"><span>Scroll</span><span class="stem"></span></div>
+  </section>
+
+  <div style="height:50vh;" aria-hidden="true"></div>
+
+  <section id="ethos" class="panel">
+    <div class="panel-inner">
+      <div class="eyebrow" style="justify-content:center;">Bitcoin, not crypto</div>
+      <h2>One asset. One ledger.<br>No exceptions.</h2>
+      <img src="crew-photo.jpg" alt="The Bitcoin Sydney West crew at a meetup" class="ethos-photo">
+      <p class="lede">We keep it simple on purpose. Every meetup, every conversation, every topic - it's all Bitcoin. If you're chasing the next token, this isn't your group. If you want to actually understand the thing that started it all, pull up a chair.</p>
+      <div class="ledger">
+        <div class="no">Altcoins &amp; "shitcoins"</div>
+        <div class="yes">Bitcoin only</div>
+        <div class="no">Token launches &amp; NFTs</div>
+        <div class="yes">Self custody &amp; privacy</div>
+        <div class="no">Price predictions</div>
+        <div class="yes">Nodes, wallets, Lightning</div>
+        <div class="no">Financial advice</div>
+        <div class="yes">Straight talk, in person</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="location">
+    <div class="eyebrow" style="justify-content:center;">Location</div>
+    <div class="venue-map"><div id="venue-map-hero"></div></div>
+    <div class="venue-address">13-15 Lexington Drive, Bella Vista NSW 2153</div>
+  </section>
+
+  <section id="meetup">
+    <div class="eyebrow">Next meetup</div>
+    <h2>Same peers. New block.</h2>
+    <div class="btn-row" style="margin-top:1.6rem;">
+      <a class="btn btn-ghost" href="#" id="rsvp-btn">RSVP on Satlantis →</a>
+    </div>
+  </section>
+
+  <section id="support">
+    <div class="eyebrow">Support the meetup</div>
+    <h2>Stack sats, keep it running</h2>
+    <p>Bitcoin Sydney West is run by volunteers and covers its own costs - venue, printing, the odd round of coffee. Every sat helps keep it free to attend.</p>
+    <div class="donate-cards">
+      <div class="donate-card">
+        <div class="label">On-chain</div>
+        <div class="qr" id="qr-onchain"></div>
+        <div class="addr">bc1q_REPLACE_WITH_YOUR_BITCOIN_ADDRESS</div>
+      </div>
+      <div class="donate-card">
+        <div class="label">Lightning</div>
+        <div class="qr" id="qr-lightning"></div>
+        <div class="addr">yourname@REPLACE_WITH_YOUR_LN_ADDRESS</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Bitcoin Sydney West - mock-up · Not your keys, not your cheese · <a href="#hero">Back to top ↑</a>
+  </footer>
+
+  <div id="code-modal-overlay" class="code-modal-overlay" aria-hidden="true">
+    <div class="code-modal">
+      <div class="eyebrow" style="justify-content:center;">Members only</div>
+      <h3>Enter your 4-digit code</h3>
+      <p class="code-modal-sub">This code is handed out at in-person meetups, so Signal stays limited to people who've actually attended.</p>
+      <input type="text" id="code-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0 0 0 0" autocomplete="off">
+      <div id="code-error" class="code-error" hidden>That code isn't right - try again.</div>
+      <div class="btn-row" style="margin-top:1.3rem;">
+        <button class="btn btn-primary" id="code-submit" type="button">Continue →</button>
+        <button class="btn btn-ghost" id="code-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============ Configurable placeholders ============ */
+const CONFIG = {
+  signalLink: "https://signal.group/#CjQKIP3YduOOQrSFtS7WURCDTEOoLr8zU2JkFHc9ANLLWmU1EhD0_bJY__HhAiZD68e4Ibhg",
+  rsvpLink: "https://www.satlantis.io/c/68/bitcoin-sydney-meetups",
+  accessCode: "1000",
+  nextMeetupISO: "2026-08-08T18:30:00+10:00", // placeholder — edit to real date/time
+  btcAddress: "bc1q_REPLACE_WITH_YOUR_BITCOIN_ADDRESS",
+  lightningAddress: "yourname@REPLACE_WITH_YOUR_LN_ADDRESS"
+};
+
+try{
+  document.getElementById('rsvp-btn').href = CONFIG.rsvpLink;
+
+  // Signal buttons open a 4-digit code gate instead of linking straight out —
+  // the code is only given out to people who've attended in person
+  const overlay = document.getElementById('code-modal-overlay');
+  const input = document.getElementById('code-input');
+  const errorEl = document.getElementById('code-error');
+  const submitBtn = document.getElementById('code-submit');
+  let failedAttempts = 0;
+  let lockoutTimer = null;
+
+  function setLocked(locked, secondsLeft){
+    input.disabled = locked;
+    submitBtn.disabled = locked;
+    submitBtn.style.opacity = locked ? '0.5' : '1';
+    if(locked){
+      errorEl.hidden = false;
+      errorEl.textContent = `That code isn't right - try again in ${secondsLeft}s`;
+    }
+  }
+
+  function startLockout(){
+    const delaySeconds = Math.pow(2, failedAttempts - 1); // 1, 2, 4, 8, 16...
+    let secondsLeft = delaySeconds;
+    setLocked(true, secondsLeft);
+    clearInterval(lockoutTimer);
+    lockoutTimer = setInterval(()=>{
+      secondsLeft--;
+      if(secondsLeft <= 0){
+        clearInterval(lockoutTimer);
+        setLocked(false);
+        errorEl.textContent = "That code isn't right - try again.";
+        input.value = '';
+        input.focus();
+      } else {
+        setLocked(true, secondsLeft);
+      }
+    }, 1000);
+  }
+
+  function openCodeModal(){
+    errorEl.hidden = true;
+    input.value = '';
+    failedAttempts = 0;
+    clearInterval(lockoutTimer);
+    setLocked(false);
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    setTimeout(()=> input.focus(), 50);
+  }
+  function closeCodeModal(){
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    clearInterval(lockoutTimer);
+  }
+  function submitCode(){
+    if(input.disabled) return;
+    if(input.value.trim() === CONFIG.accessCode){
+      closeCodeModal();
+      window.open(CONFIG.signalLink, '_blank');
+    } else {
+      failedAttempts++;
+      startLockout();
+    }
+  }
+
+  ['signal-btn-hero'].forEach(id=>{
+    const btn = document.getElementById(id);
+    if(btn) btn.addEventListener('click', (e)=>{ e.preventDefault(); openCodeModal(); });
+  });
+  document.getElementById('code-submit').addEventListener('click', submitCode);
+  document.getElementById('code-cancel').addEventListener('click', closeCodeModal);
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeCodeModal(); });
+  input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') submitCode(); });
+}catch(err){ console.error('Link/modal setup failed:', err); }
+
+/* ============ Node propagation network (canvas) ============
+   This runs first and is self-contained, so it keeps working even if
+   something below it (QR codes, countdown) fails to load. */
+const canvas = document.getElementById('net');
+const ctx = canvas.getContext('2d');
+const reduceMotion = false; // animation always plays, regardless of the visitor's OS motion setting
+
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  buildNetwork();
+  if(typeof setupHeroPosition === 'function') setupHeroPosition();
+}
+
+let nodes = [], neighborLists = [], liveEdges = [];
+
+const GROWTH_DURATION = 16;   // seconds of "growth time" spanning the initial staggered activations
+const NODE_FADE_TIME = 0.5;   // growth-seconds for a newly-on node to fade up
+const SPEED_FACTOR = 0.28;    // slows real time down to growth-time (~3.5x slower overall)
+
+const LINE_DRAW_SECONDS = 4;    // real seconds for a line to fully draw between two nodes
+const LINE_DELAY_SECONDS = 0.5; // real seconds between a node turning on and its lines starting
+const LINE_DRAW_TIME = LINE_DRAW_SECONDS * SPEED_FACTOR;   // converted to growth-clock units
+const LINE_DELAY = LINE_DELAY_SECONDS * SPEED_FACTOR;      // converted to growth-clock units
+
+function buildNetwork(){
+  nodes = [];
+  const minWH = Math.min(W,H);
+  const margin = minWH*0.06;
+
+  // one genesis node starts it all — positioned in the gap between the heading
+  // and the tagline, so it reads clearly as the centre of the network
+  const genesisSpace = document.getElementById('genesis-space');
+  let gx = W*0.5, gy = H*0.42; // fallback if the element isn't found for some reason
+  if(genesisSpace){
+    const gRect = genesisSpace.getBoundingClientRect();
+    gx = gRect.left + gRect.width/2;
+    gy = gRect.top + gRect.height/2;
+  }
+  nodes.push({x:gx, y:gy, onTime:0});
+
+  // the rest are scattered randomly across the whole viewport, but their first
+  // turn-on times are staggered evenly (stratified) rather than purely random,
+  // so they don't randomly clump up and pop in several-at-once
+  const targetCount = Math.max(40, Math.min(90, Math.floor((W*H)/18000)));
+  const minGap = minWH*0.05;
+  let guard = 0;
+  while(nodes.length < targetCount && guard < targetCount*40){
+    guard++;
+    const x = margin + Math.random()*(W-margin*2);
+    const y = margin + Math.random()*(H-margin*2);
+    const tooClose = nodes.some(n => Math.hypot(n.x-x, n.y-y) < minGap);
+    if(tooClose) continue;
+    nodes.push({x, y, onTime: 0}); // onTime assigned below, after the count is known
+  }
+
+  const totalSlots = nodes.length - 1;
+  const spreadWindow = GROWTH_DURATION * 0.9;
+  for(let i=1;i<nodes.length;i++){
+    const slot = i - 1;
+    const slotStart = 0.6 + (slot/totalSlots) * spreadWindow;
+    const slotSize = spreadWindow / totalSlots;
+    nodes[i].onTime = slotStart + Math.random()*slotSize;
+  }
+
+  // each node's nearest neighbours, precomputed once since positions are static
+  const maxNeighbourDist = minWH*0.22;
+  neighborLists = nodes.map((n,i)=>{
+    const cands = [];
+    nodes.forEach((m,j)=>{
+      if(i===j) return;
+      const d = Math.hypot(n.x-m.x, n.y-m.y);
+      if(d < maxNeighbourDist) cands.push({j,d});
+    });
+    cands.sort((a,b)=>a.d-b.d);
+    return cands.slice(0,4).map(c=>c.j);
+  });
+
+  nodes.forEach(n=>{ n.activated = false; n.life = 0; n.activatedAt = 0; n.synced = false; n.cyclable = Math.random() < 0.12; });
+  nodes[0].activated = true;
+  nodes[0].life = 1;
+  nodes[0].synced = true; // genesis is always considered synced
+  liveEdges = [];
+  growth = 0;
+}
+
+let growth = 0;
+
+/* Hero text recedes into the network as you scroll, shrinking down and
+   drifting to a random point — as if it becomes one of the nodes itself. */
+const heroCollapse = document.getElementById('hero-collapse');
+const heroCollapseSpacer = document.getElementById('hero-collapse-spacer');
+let collapseTarget = {dx:0, dy:0, tx:0, ty:0};
+let heroNodeSpawned = false;
+
+function setupHeroPosition(){
+  // measure its natural, in-flow position first (reset any previous fixed styling)
+  heroCollapse.style.position = 'static';
+  heroCollapse.style.left = '';
+  heroCollapse.style.top = '';
+  heroCollapse.style.transform = 'none';
+  const rect = heroCollapse.getBoundingClientRect();
+  heroCollapseSpacer.style.height = rect.height + 'px';
+
+  // pin it to that exact spot with fixed positioning — like the canvas, it no
+  // longer drifts with normal document scrolling, so our own translate/scale
+  // animation is the only thing moving it from here on
+  const baseX = rect.left + rect.width/2;
+  const baseY = rect.top + rect.height/2;
+  heroCollapse.style.position = 'fixed';
+  heroCollapse.style.left = baseX + 'px';
+  heroCollapse.style.top = baseY + 'px';
+
+  const tx = window.innerWidth*0.1 + Math.random()*window.innerWidth*0.8;
+  const ty = window.innerHeight*0.66 + Math.random()*window.innerHeight*0.06; // ~66% down the screen
+  collapseTarget = { dx: tx - baseX, dy: ty - baseY, tx, ty };
+  heroNodeSpawned = false;
+}
+setupHeroPosition();
+
+function spawnHeroNode(x, y){
+  if(heroNodeSpawned) return;
+  heroNodeSpawned = true;
+  const idx = nodes.length;
+  nodes.push({x, y, onTime:0, activated:false, life:0, activatedAt:0, synced:false, cyclable:false, heroOrigin:true});
+  const maxNeighbourDist = Math.min(W,H)*0.22;
+  const cands = [];
+  for(let j=0;j<idx;j++){
+    const d = Math.hypot(nodes[j].x-x, nodes[j].y-y);
+    if(d < maxNeighbourDist) cands.push({j,d});
+  }
+  cands.sort((a,b)=>a.d-b.d);
+  neighborLists[idx] = cands.slice(0,4).map(c=>c.j);
+}
+
+/* Growth runs on its own clock so the network keeps slowly coming alive even
+   when nobody is scrolling. Scrolling adds a temporary speed boost on top. */
+let lastScrollY = window.scrollY;
+function onScroll(){
+  const sy = window.scrollY;
+  lastScrollY = sy;
+
+  // keep a steady, visible presence throughout the page (animation is the main character)
+  const heroFade = Math.max(0.34, 1 - (sy / (window.innerHeight*1.1)) * 0.6);
+  canvas.style.opacity = heroFade.toFixed(2);
+
+  const cp = Math.max(0, Math.min(1, sy / (window.innerHeight*0.5)));
+  const scale = 1 - cp*0.97;
+  heroCollapse.style.transform = `translate(-50%,-50%) translate(${(collapseTarget.dx*cp).toFixed(1)}px, ${(collapseTarget.dy*cp).toFixed(1)}px) scale(${scale.toFixed(3)})`;
+  if(cp >= 1) spawnHeroNode(collapseTarget.tx, collapseTarget.ty);
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+
+const STAGGER_STEP = 0.4 * SPEED_FACTOR;   // real ~0.4s between each of a node's simultaneous new lines
+const STAGGER_JITTER = 0.3 * SPEED_FACTOR; // plus a little random extra per line
+const EDGE_FADE_TIME = 0.6 * SPEED_FACTOR; // how long a dropped connection takes to fade out
+const LIFESPAN_MIN = 10, LIFESPAN_MAX = 24; // growth-seconds a node stays on before cycling off
+const GENESIS_FADE_TIME = 2 * SPEED_FACTOR; // real ~2s fade to normal color once genesis hits ~5 connections
+
+const HERO_LINE_DELAY = 0.05 * SPEED_FACTOR; // near-instant — the hero node needs to connect fast, before it scrolls off
+const HERO_LINE_DRAW_TIME = 0.5 * SPEED_FACTOR; // real ~0.5s, much quicker than the normal 4s draw
+
+/* ============ Transaction broadcasts ============
+   Small packets that originate at a random synced node and ripple outward
+   hop-by-hop through the mesh, like a transaction being gossiped across the
+   real Bitcoin p2p network — only synced nodes can originate or relay one. */
+let txPackets = [];
+let pendingTxPackets = []; // newly-relayed packets, merged in after this frame's filter runs
+let nextTxAt = 2 * SPEED_FACTOR + Math.random() * 4 * SPEED_FACTOR;
+const TX_TRAVEL_TIME = 1 * SPEED_FACTOR;      // real ~1s per hop, visible movement node-to-node
+const TX_MAX_HOPS = Infinity;                // no cap — ripples out until every reachable node has it
+const TX_RELAY_SKIP_CHANCE = 0.15;            // a peer that's already "heard" it sometimes doesn't relay
+const TX_INTERVAL_MIN = 8 * SPEED_FACTOR, TX_INTERVAL_MAX = 25 * SPEED_FACTOR; // real 8-25s between bursts
+const TX_MAX_CONCURRENT = 18; // hard cap on simultaneous packets, for clarity and performance
+
+function edgesTouching(nodeIdx){
+  return liveEdges.filter(e => (e.a === nodeIdx || e.b === nodeIdx) && e.dyingAt === null);
+}
+
+function propagateTx(fromNode, cameFrom, txId, visited, hopsLeft){
+  if(hopsLeft <= 0) return;
+  edgesTouching(fromNode).forEach(e=>{
+    if(txPackets.length + pendingTxPackets.length >= TX_MAX_CONCURRENT) return;
+    const other = e.a === fromNode ? e.b : e.a;
+    if(other === cameFrom || visited.has(other)) return;
+    // a node can't accept/relay a transaction until it's finished syncing itself
+    if(!nodes[other].activated || !nodes[other].synced) return;
+    if(Math.random() < TX_RELAY_SKIP_CHANCE) return; // already-known tx, doesn't relay it again
+    const nextVisited = new Set(visited);
+    nextVisited.add(other);
+    pendingTxPackets.push({
+      from: fromNode, to: other, startedAt: growth, arrived: false,
+      onArrive(){
+        const n = nodes[other];
+        if(n && n.activated && n.synced) propagateTx(other, fromNode, txId, nextVisited, hopsLeft - 1);
+      }
+    });
+  });
+}
+
+function spawnTransaction(){
+  if(txPackets.length + pendingTxPackets.length >= TX_MAX_CONCURRENT) return;
+  const candidates = [];
+  nodes.forEach((n,i)=>{ if(n.activated && n.synced) candidates.push(i); });
+  if(candidates.length === 0) return;
+  const origin = candidates[Math.floor(Math.random()*candidates.length)];
+  propagateTx(origin, -1, Math.random().toString(36).slice(2), new Set([origin]), TX_MAX_HOPS);
+}
+
+let t = 0;
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  const dt = 1/60;
+  if(!reduceMotion){
+    growth += dt * SPEED_FACTOR;
+  }
+  // no global reset — the network runs indefinitely; individual nodes cycle on and off
+
+  // redundant, frame-driven check (not just scroll-event-driven) so the spawn
+  // reliably happens even if a scroll event gets missed on some mobile browsers
+  const heroCp = Math.max(0, Math.min(1, window.scrollY / (window.innerHeight*0.5)));
+  if(heroCp >= 1) spawnHeroNode(collapseTarget.tx, collapseTarget.ty);
+
+  // sporadic transaction broadcasts — occasionally a small burst of several at once
+  if(!reduceMotion && growth >= nextTxAt){
+    const burst = Math.random() < 0.3 ? 2 + Math.floor(Math.random()*3) : 1;
+    for(let k=0;k<burst;k++) spawnTransaction();
+    nextTxAt = growth + TX_INTERVAL_MIN + Math.random()*(TX_INTERVAL_MAX-TX_INTERVAL_MIN);
+  }
+
+  txPackets = txPackets.filter(p=>{
+    const a = nodes[p.from], b = nodes[p.to];
+    if(!a || !b) return false;
+    const progress = Math.min(1, (growth - p.startedAt)/(p.duration || TX_TRAVEL_TIME));
+    const x = a.x + (b.x-a.x)*progress, y = a.y + (b.y-a.y)*progress;
+
+    // trailing glow/streak behind the packet
+    const trailBack = Math.max(0, progress - 0.16);
+    const tx0 = a.x + (b.x-a.x)*trailBack, ty0 = a.y + (b.y-a.y)*trailBack;
+    const trailGrad = ctx.createLinearGradient(tx0,ty0,x,y);
+    trailGrad.addColorStop(0, 'rgba(255,207,138,0)');
+    trailGrad.addColorStop(1, 'rgba(255,207,138,0.35)');
+    ctx.strokeStyle = trailGrad;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tx0,ty0); ctx.lineTo(x,y);
+    ctx.stroke();
+
+    // the packet itself
+    const grad = ctx.createRadialGradient(x,y,0,x,y,3.2);
+    grad.addColorStop(0, 'rgba(255,235,200,0.55)');
+    grad.addColorStop(1, 'rgba(255,207,138,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x,y,3.2,0,Math.PI*2);
+    ctx.fill();
+
+    if(progress >= 1 && !p.arrived){
+      p.arrived = true;
+      p.onArrive();
+      return false;
+    }
+    return true;
+  });
+
+  if(pendingTxPackets.length){
+    txPackets = txPackets.concat(pendingTxPackets);
+    pendingTxPackets = [];
+  }
+
+  // activate any node whose moment has arrived (first time, or cycling back on),
+  // wiring it to 1–3 of its nearest already-synced peers
+  nodes.forEach((n,i)=>{
+    if(n.activated || n.onTime > growth) return;
+    n.activated = true;
+    n.activatedAt = growth;
+
+    const wantCount = 2 + Math.floor(Math.random()*3); // 2, 3, or 4
+
+    // only already-synced peers can hand off a connection — a node has to be
+    // synced itself before it can help sync anyone else
+    const candidates = [];
+    const seen = new Set();
+    neighborLists[i].forEach(j=>{
+      if(candidates.length >= wantCount) return;
+      if(nodes[j].activated && nodes[j].synced){ candidates.push(j); seen.add(j); }
+    });
+
+    // fill any remaining slots with the closest already-synced nodes anywhere
+    // in the network, however far that is — nothing gets left unconnected
+    if(candidates.length < wantCount){
+      const rest = [];
+      nodes.forEach((m,j)=>{
+        if(j===i || seen.has(j) || !m.activated || !m.synced) return;
+        rest.push({j, d:Math.hypot(n.x-m.x, n.y-m.y)});
+      });
+      rest.sort((a,b)=>a.d-b.d);
+      rest.slice(0, wantCount-candidates.length).forEach(o=> candidates.push(o.j));
+    }
+
+    // stagger the lines so simultaneous connections don't all draw in lockstep —
+    // except the hero node, which needs to connect fast before it scrolls away
+    const isHero = !!n.heroOrigin;
+    candidates.forEach((j,k)=>{
+      const stagger = isHero ? 0 : (k*STAGGER_STEP + Math.random()*STAGGER_JITTER);
+      const delay = isHero ? HERO_LINE_DELAY : LINE_DELAY;
+      const drawTime = isHero ? HERO_LINE_DRAW_TIME : LINE_DRAW_TIME;
+      liveEdges.push({a:j, b:i, bornAt:growth + delay + stagger, dyingAt:null, drawTime});
+    });
+    // NOTE: this node only becomes "synced" once one of these lines has actually
+    // finished drawing — see the completion check below, in the edge-draw pass
+
+    // schedule this node to eventually cycle off and later back on again — only
+    // for the small minority of nodes marked cyclable; most stay online
+    if(n.cyclable) n.lifespan = LIFESPAN_MIN + Math.random()*(LIFESPAN_MAX-LIFESPAN_MIN);
+  });
+
+  // cycle nodes off once their lifespan is up, dropping their connections and
+  // scheduling them to reactivate (and resync) again later
+  nodes.forEach((n,i)=>{
+    if(n.permanent || !n.cyclable || !n.activated) return;
+    if(growth - n.activatedAt < n.lifespan) return;
+    n.activated = false;
+    n.synced = false;
+    n.onTime = growth + 1.5 + Math.random()*4;
+    liveEdges.forEach(e=>{
+      if((e.a===i || e.b===i) && e.dyingAt===null) e.dyingAt = growth;
+    });
+  });
+
+  // draw + prune connections
+  liveEdges = liveEdges.filter(e=>{
+    const a = nodes[e.a], b = nodes[e.b];
+    const growIn = reduceMotion ? 1 : Math.max(0, Math.min(1, (growth - e.bornAt)/(e.drawTime || LINE_DRAW_TIME)));
+    let fadeOut = 1;
+    if(e.dyingAt !== null){
+      fadeOut = Math.max(0, 1 - (growth - e.dyingAt)/EDGE_FADE_TIME);
+      if(fadeOut <= 0) return false; // fully faded — drop it
+    }
+
+    const ex = a.x + (b.x-a.x)*growIn, ey = a.y + (b.y-a.y)*growIn;
+    ctx.strokeStyle = `rgba(247,147,26,${(0.32*fadeOut).toFixed(3)})`;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(ex,ey);
+    ctx.stroke();
+
+    // the receiving node only counts as synced once this line has actually
+    // finished drawing — it can't act as a source for anyone else before that
+    if(growIn >= 1 && e.dyingAt === null) nodes[e.b].synced = true;
+
+    return true;
+  });
+
+  nodes.forEach((n,i)=>{
+    n.life = reduceMotion
+      ? (n.activated ? 1 : 0)
+      : Math.max(0, Math.min(1, n.life + (n.activated ? dt/NODE_FADE_TIME : -dt/NODE_FADE_TIME)));
+    if(n.life <= 0.02) return;
+
+    const isGenesis = i===0;
+
+    // once genesis has made ~5 connections, it gradually fades to look like
+    // any other node instead of staying visually special forever
+    let genesisFadeProgress = 0;
+    if(isGenesis){
+      if(edgesTouching(0).length >= 5 && n.genesisFadeStart === undefined){
+        n.genesisFadeStart = growth;
+      }
+      if(n.genesisFadeStart !== undefined){
+        genesisFadeProgress = Math.min(1, (growth - n.genesisFadeStart)/GENESIS_FADE_TIME);
+      }
+    }
+
+    const emphasis = isGenesis ? (1.7 - 0.7*genesisFadeProgress) : (n.heroOrigin ? 1.8 : 1);
+    const pulse = reduceMotion ? 1 : 0.85 + 0.15*Math.sin(t*0.6 + i*0.7);
+
+    // a quick bright flicker the moment a node switches on, settling back to normal —
+    // the hero node gets a much bigger, slower-fading flash so it's unmistakable
+    const sinceOn = growth - (n.activatedAt||0);
+    const flickRate = n.heroOrigin ? 1.8 : 5;
+    const flickMag = n.heroOrigin ? 2.6 : 1.4;
+    const flick = reduceMotion ? 0 : Math.exp(-sinceOn*flickRate) * flickMag;
+    const flickMix = Math.min(1, flick);
+
+    const r = 3.2 * pulse * n.life * emphasis * (1 + flick*0.9);
+    const glow = 10 * (0.4 + 0.6*n.life) * emphasis * (1 + flick*1.3);
+
+    const grad = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,glow);
+    grad.addColorStop(0, `rgba(247,147,26,${(0.4*n.life*(1+flick*0.6)).toFixed(3)})`);
+    grad.addColorStop(1, 'rgba(247,147,26,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,glow,0,Math.PI*2);
+    ctx.fill();
+
+    // base color blends from genesis-gold to normal orange as it fades; the
+    // usual white flicker mix is layered on top of whichever base is current
+    const baseR = 255 + (247-255)*genesisFadeProgress;
+    const baseG = 207 + (147-207)*genesisFadeProgress;
+    const baseB = 138 + (26-138)*genesisFadeProgress;
+    const fr = Math.round(baseR + (255-baseR)*flickMix);
+    const fg = Math.round(baseG + (244-baseG)*flickMix);
+    const fb = Math.round(baseB + (224-baseB)*flickMix);
+    ctx.fillStyle = isGenesis ? `rgb(${fr},${fg},${fb})` : `rgb(${Math.round(247+(255-247)*flickMix)},${Math.round(147+(244-147)*flickMix)},${Math.round(26+(224-26)*flickMix)})`;
+    ctx.globalAlpha = n.life;
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,Math.max(r,0.4),0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  t += dt;
+  requestAnimationFrame(draw);
+}
+
+resize();
+let lastResizeW = window.innerWidth, lastResizeH = window.innerHeight;
+window.addEventListener('resize', () => {
+  const newW = window.innerWidth, newH = window.innerHeight;
+  const widthChanged = Math.abs(newW - lastResizeW) > 2;
+  const heightChangedALot = Math.abs(newH - lastResizeH) > 150;
+  lastResizeW = newW; lastResizeH = newH;
+
+  if(widthChanged || heightChangedALot){
+    // a real resize/orientation change — safe to rebuild the whole network
+    resize();
+  } else {
+    // just the mobile browser's address bar collapsing/expanding on scroll —
+    // resize the canvas surface only, don't touch the live network state
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = newW; H = newH;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+});
+onScroll();
+draw();
+
+/* ============ Venue map (dark CartoDB tiles over OpenStreetMap data) ============ */
+try{
+  if(typeof L === 'undefined') throw new Error('Leaflet did not load');
+  const VENUE_LAT = -33.7439, VENUE_LON = 150.9589; // Bella Vista Hotel, Bella Vista NSW
+  const mapEl = document.getElementById('venue-map-hero');
+
+  if(mapEl){
+    const map = L.map('venue-map-hero', {
+      zoomControl: true,
+      attributionControl: true,
+      scrollWheelZoom: false
+    }).setView([VENUE_LAT, VENUE_LON], 9); // zoomed out to show the whole Sydney basin
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+
+    L.circleMarker([VENUE_LAT, VENUE_LON], {
+      radius: 8,
+      color: '#f7931a',
+      weight: 2,
+      fillColor: '#f7931a',
+      fillOpacity: 0.9
+    }).addTo(map).bindPopup('Bella Vista Hotel');
+  }
+}catch(err){
+  console.error('Venue map failed to load:', err);
+  const mapEl = document.getElementById('venue-map-hero');
+  if(mapEl) mapEl.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-family:IBM Plex Mono,monospace;font-size:0.75rem;color:#8a8f98;text-align:center;padding:1rem;">Map unavailable - see address below</div>';
+}
+
+/* ============ QR codes (won't block the animation above if this fails) ============ */
+try{
+  if(typeof QRCode === 'undefined') throw new Error('QRCode library did not load');
+  new QRCode(document.getElementById("qr-onchain"), {
+    text: "bitcoin:" + CONFIG.btcAddress,
+    width: 130, height: 130,
+    colorDark: "#0b0c0e", colorLight: "#f5f1e8"
+  });
+  new QRCode(document.getElementById("qr-lightning"), {
+    text: "lightning:" + CONFIG.lightningAddress,
+    width: 130, height: 130,
+    colorDark: "#0b0c0e", colorLight: "#f5f1e8"
+  });
+}catch(err){
+  console.error('QR code generation failed:', err);
+  ['qr-onchain','qr-lightning'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = '<div style="width:130px;height:130px;display:flex;align-items:center;justify-content:center;font-family:IBM Plex Mono,monospace;font-size:0.65rem;color:#8a8f98;text-align:center;padding:0.5rem;">QR unavailable - use address below</div>';
+  });
+}
+
+/* ============ Countdown ============ */
+try{
+  const target = new Date(CONFIG.nextMeetupISO).getTime();
+  function tickCountdown(){
+    const now = Date.now();
+    let diff = Math.max(0, target - now);
+    const d = Math.floor(diff/86400000);
+    const h = Math.floor(diff%86400000/3600000);
+    const m = Math.floor(diff%3600000/60000);
+    const s = Math.floor(diff%60000/1000);
+    document.getElementById('cd-days').textContent = String(d).padStart(2,'0');
+    document.getElementById('cd-hours').textContent = String(h).padStart(2,'0');
+    document.getElementById('cd-mins').textContent = String(m).padStart(2,'0');
+    document.getElementById('cd-secs').textContent = String(s).padStart(2,'0');
+  }
+  tickCountdown();
+  setInterval(tickCountdown, 1000);
+}catch(err){ console.error('Countdown failed:', err); }
+
+
+</script>
+
+</body>
+</html>
