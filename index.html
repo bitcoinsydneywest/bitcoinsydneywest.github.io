@@ -462,7 +462,7 @@
     </div>
     <div id="hero-collapse-spacer"></div>
     <div id="genesis-space" aria-hidden="true"></div>
-    <p class="tag">A local, Bitcoin-only meetup for Western Sydney. No altcoins, no hype, no noise - just people getting closer to sound money and to each other.</p>
+    <p class="tag">A local, Bitcoin-only meetup for Western Sydney. No altcoins, no hype, no noise - just people getting closer to sound money and building good connections.</p>
     <div class="btn-row">
       <a class="btn btn-primary" href="#" id="signal-btn-hero">Join the Signal group →</a>
     </div>
@@ -493,7 +493,11 @@
         <div class="no">Price predictions</div>
         <div class="yes">Nodes, wallets, Lightning</div>
         <div class="no">Financial advice</div>
-        <div class="yes">Straight talk, in person</div>
+        <div class="yes">Generational wealth</div>
+        <div class="yes">Self sovereignty</div>
+        <div class="yes">Financial inclusion</div>
+        <div class="yes">Economic empowerment</div>
+        <div class="yes">Low time preference</div>
       </div>
     </div>
   </section>
@@ -502,10 +506,6 @@
     <div class="eyebrow" style="justify-content:center;">Upcoming Sydney meetups</div>
     <h2>Upcoming events</h2>
     <div class="venue-map"><div id="venue-map-hero"></div></div>
-    <div class="other-meetups-item" style="margin:1.6rem 0 2rem;">
-      <div class="oml-label">Other Bitcoin meetups worldwide</div>
-      <a href="https://bitcoin-only.com/meetups" target="_blank" rel="noopener">bitcoin-only.com/meetups</a>
-    </div>
     <div class="events-wrap">
       <div id="events-list" class="events-list">
         <div class="events-loading">Loading upcoming events…</div>
@@ -515,6 +515,10 @@
     <div class="btn-row" style="margin-top:2rem;">
       <a class="btn btn-ghost" href="https://www.meetup.com/bitcoin_sydney/events/calendar/" target="_blank" rel="noopener">View events on Meetup →</a>
       <a class="btn btn-ghost" href="https://www.satlantis.io/c/68/bitcoin-sydney-meetups" target="_blank" rel="noopener">View events on Satlantis →</a>
+    </div>
+    <div class="other-meetups-item" style="margin:2rem 0 0;">
+      <div class="oml-label">Other Bitcoin meetups worldwide</div>
+      <a href="https://bitcoin-only.com/meetups" target="_blank" rel="noopener">bitcoin-only.com/meetups</a>
     </div>
   </section>
 
@@ -667,7 +671,7 @@ const LINE_DELAY = LINE_DELAY_SECONDS * SPEED_FACTOR;      // converted to growt
 function buildNetwork(){
   nodes = [];
   const minWH = Math.min(W,H);
-  const margin = minWH*0.06;
+  const margin = minWH*0.16;
 
   // one genesis node starts it all — positioned in the gap between the heading
   // and the tagline, so it reads clearly as the centre of the network
@@ -815,19 +819,25 @@ const HERO_LINE_DRAW_TIME = 0.5 * SPEED_FACTOR; // real ~0.5s, much quicker than
       in for a miner's block sweeping through and confirming everything at
       once. Real blocks arrive roughly every 10 minutes; compressed here to
       every 10 seconds so the animation reads as ongoing activity.
-   Both ripple hop-by-hop through the mesh the same way; only synced nodes
-   can originate or relay either kind. */
+
+   Both spread as a genuine distance-ordered wave: the whole reachable,
+   synced part of the mesh is mapped out up front (shortest path by physical
+   distance from the origin, like Dijkstra), and every packet's start/arrival
+   time is scheduled from that distance — so nearer nodes always light up
+   before farther ones, giving a clean expanding "pulse of light" rather than
+   an arbitrary hop-by-hop bounce. */
 let txPackets = [];
-let pendingTxPackets = []; // newly-relayed packets, merged in after this frame's filter runs
-const TX_MAX_HOPS = Infinity;                // no cap — ripples out until every reachable node has it
-const TX_RELAY_SKIP_CHANCE = 0.15;            // a peer that's already "heard" it sometimes doesn't relay
-const TX_MAX_CONCURRENT = 18;                 // hard cap on simultaneous packets, for clarity and performance
+const TX_RELAY_SKIP_CHANCE = 0.15; // a peer that's already "heard" it sometimes isn't used as a relay path
 
-const TX_TRAVEL_TIME = 1 * SPEED_FACTOR;      // real ~1s per hop, visible movement node-to-node
+const TX_TRAVEL_TIME = 1 * SPEED_FACTOR;      // real ~1s per "typical" hop distance
 let nextTxAt = 1 * SPEED_FACTOR;
-const TX_INTERVAL_MIN = 1 * SPEED_FACTOR, TX_INTERVAL_MAX = 3 * SPEED_FACTOR; // small trickle, every 1-3s
+const TX_INTERVAL_MIN = 1.43 * SPEED_FACTOR, TX_INTERVAL_MAX = 4.29 * SPEED_FACTOR; // 30% less often than before
 
-const BLOCK_TRAVEL_TIME = 0.28 * SPEED_FACTOR; // ~3.5x faster than a transaction hop
+const BLOCK_TRAVEL_TIME = 0.84 * SPEED_FACTOR; // 50% slower again - was 0.56 (originally 0.28)
+const BLOCK_PULSE_GROW_DURATION = 0.2 * SPEED_FACTOR;   // real ~0.2s - same speed as before
+const BLOCK_PULSE_SHRINK_DURATION = 0.4 * SPEED_FACTOR;  // real ~0.4s - twice as slow as before
+const BLOCK_PULSE_AMPLITUDE = 2.0; // peak size = 1 + amplitude = 3x normal
+const BLOCK_FLASH_DURATION = 0.5 * SPEED_FACTOR; // real ~0.5s - the distinct origin flash ring
 let nextBlockAt = 4 * SPEED_FACTOR;
 const BLOCK_INTERVAL = 10 * SPEED_FACTOR;     // a new block propagates every 10 real seconds
 
@@ -835,42 +845,80 @@ function edgesTouching(nodeIdx){
   return liveEdges.filter(e => (e.a === nodeIdx || e.b === nodeIdx) && e.dyingAt === null);
 }
 
-function propagateTx(fromNode, cameFrom, txId, visited, hopsLeft, kind){
-  if(hopsLeft <= 0) return;
-  edgesTouching(fromNode).forEach(e=>{
-    if(txPackets.length + pendingTxPackets.length >= TX_MAX_CONCURRENT) return;
-    const other = e.a === fromNode ? e.b : e.a;
-    if(other === cameFrom || visited.has(other)) return;
-    // a node can't accept/relay anything until it's finished syncing itself
-    if(!nodes[other].activated || !nodes[other].synced) return;
-    if(Math.random() < TX_RELAY_SKIP_CHANCE) return; // already-known, doesn't relay it again
-    const nextVisited = new Set(visited);
-    nextVisited.add(other);
-    pendingTxPackets.push({
-      from: fromNode, to: other, startedAt: growth, arrived: false, kind,
-      duration: kind === 'block' ? BLOCK_TRAVEL_TIME : TX_TRAVEL_TIME,
-      onArrive(){
-        const n = nodes[other];
-        if(n && n.activated && n.synced) propagateTx(other, fromNode, txId, nextVisited, hopsLeft - 1, kind);
-      }
-    });
-  });
-}
-
 function spawnPropagation(kind){
-  if(txPackets.length + pendingTxPackets.length >= TX_MAX_CONCURRENT) return;
   const candidates = [];
   nodes.forEach((n,i)=>{ if(n.activated && n.synced) candidates.push(i); });
   if(candidates.length === 0) return;
   const origin = candidates[Math.floor(Math.random()*candidates.length)];
-  propagateTx(origin, -1, Math.random().toString(36).slice(2), new Set([origin]), TX_MAX_HOPS, kind);
+  if(kind === 'block') nodes[origin].blockOriginFlashAt = growth; // distinct marker for precisely timing when each wave begins
+
+  // shortest path (by physical distance) from the origin to every reachable,
+  // already-synced node — this determines the outward order of the wave
+  const dist = new Array(nodes.length).fill(Infinity);
+  const parent = new Array(nodes.length).fill(-1);
+  const settled = new Array(nodes.length).fill(false);
+  dist[origin] = 0;
+
+  for(let iter=0; iter<nodes.length; iter++){
+    let u = -1, best = Infinity;
+    for(let i=0;i<nodes.length;i++){
+      if(!settled[i] && dist[i] < best){ best = dist[i]; u = i; }
+    }
+    if(u === -1) break;
+    settled[u] = true;
+
+    const maxEdgeLen = Math.min(W,H) * 0.22; // skip the rare long "fallback" connections between distant nodes
+    edgesTouching(u).forEach(e=>{
+      const v = e.a === u ? e.b : e.a;
+      if(settled[v]) return;
+      if(v !== origin && (!nodes[v].activated || !nodes[v].synced)) return; // can't receive until synced
+      if(Math.random() < TX_RELAY_SKIP_CHANCE) return; // this path sometimes just isn't used
+
+      const edgeLen = Math.hypot(nodes[u].x-nodes[v].x, nodes[u].y-nodes[v].y);
+      if(edgeLen > maxEdgeLen) return; // too far to look like a normal hop - route around it instead
+      const newDist = dist[u] + edgeLen;
+      if(newDist < dist[v]){
+        dist[v] = newDist;
+        parent[v] = u;
+      }
+    });
+  }
+
+  // typical edge length on this screen, used to calibrate wave speed so the
+  // overall pacing feels the same as before, just properly distance-ordered
+  const typicalDist = Math.min(W,H) * 0.20;
+  const travelTime = kind === 'block' ? BLOCK_TRAVEL_TIME : TX_TRAVEL_TIME;
+  const waveSpeed = typicalDist / travelTime; // px per growth-second
+
+  for(let v=0; v<nodes.length; v++){
+    if(parent[v] === -1) continue; // origin itself, or unreached
+    const u = parent[v];
+    const edgeLen = Math.hypot(nodes[u].x-nodes[v].x, nodes[u].y-nodes[v].y);
+    txPackets.push({
+      from: u, to: v, kind,
+      startedAt: growth + dist[u]/waveSpeed,
+      duration: edgeLen/waveSpeed,
+      arrived: false,
+      onArrive(){
+        if(kind === 'block' && nodes[v]) nodes[v].blockPulseAt = growth;
+      }
+    });
+  }
 }
 
 let t = 0;
-function draw(){
+let lastFrameTime = null;
+function draw(timestamp){
   ctx.clearRect(0,0,W,H);
 
-  const dt = 1/60;
+  // measure actual elapsed time between frames rather than assuming 60fps —
+  // otherwise everything runs too fast on higher-refresh-rate displays
+  // (120Hz/144Hz+ monitors call this function twice as often as 60Hz ones)
+  if(lastFrameTime === null) lastFrameTime = timestamp;
+  let dt = (timestamp - lastFrameTime) / 1000;
+  lastFrameTime = timestamp;
+  dt = Math.min(dt, 1/15); // clamp so a dropped/backgrounded tab doesn't cause a huge jump
+
   if(!reduceMotion){
     growth += dt * SPEED_FACTOR;
   }
@@ -896,26 +944,39 @@ function draw(){
   txPackets = txPackets.filter(p=>{
     const a = nodes[p.from], b = nodes[p.to];
     if(!a || !b) return false;
+    if(growth < p.startedAt) return true; // scheduled for later in the wave - keep it, don't draw yet
     const progress = Math.min(1, (growth - p.startedAt)/(p.duration || TX_TRAVEL_TIME));
     const x = a.x + (b.x-a.x)*progress, y = a.y + (b.y-a.y)*progress;
     const isBlock = p.kind === 'block';
-    const r = isBlock ? 5.6 : 2.4;
+    const r = isBlock ? 7.84 : 2.4;
 
     // trailing glow/streak behind the packet
     const trailBack = Math.max(0, progress - (isBlock ? 0.2 : 0.12));
     const tx0 = a.x + (b.x-a.x)*trailBack, ty0 = a.y + (b.y-a.y)*trailBack;
     const trailGrad = ctx.createLinearGradient(tx0,ty0,x,y);
     trailGrad.addColorStop(0, 'rgba(255,207,138,0)');
-    trailGrad.addColorStop(1, `rgba(255,207,138,${isBlock ? 0.5 : 0.22})`);
+    trailGrad.addColorStop(1, `rgba(255,207,138,${isBlock ? 0.36 : 0.22})`);
     ctx.strokeStyle = trailGrad;
-    ctx.lineWidth = isBlock ? 1.8 : 0.8;
+    ctx.lineWidth = isBlock ? 3 : 0.8;
     ctx.beginPath();
     ctx.moveTo(tx0,ty0); ctx.lineTo(x,y);
     ctx.stroke();
 
+    // extra soft outer glow, block events only
+    if(isBlock){
+      const glowR = r * 2.6;
+      const glow = ctx.createRadialGradient(x,y,0,x,y,glowR);
+      glow.addColorStop(0, 'rgba(255,207,138,0.21)');
+      glow.addColorStop(1, 'rgba(255,207,138,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x,y,glowR,0,Math.PI*2);
+      ctx.fill();
+    }
+
     // the packet itself
     const grad = ctx.createRadialGradient(x,y,0,x,y,r);
-    grad.addColorStop(0, `rgba(255,235,200,${isBlock ? 0.6 : 0.4})`);
+    grad.addColorStop(0, `rgba(255,235,200,${isBlock ? 0.45 : 0.4})`);
     grad.addColorStop(1, 'rgba(255,207,138,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -929,11 +990,6 @@ function draw(){
     }
     return true;
   });
-
-  if(pendingTxPackets.length){
-    txPackets = txPackets.concat(pendingTxPackets);
-    pendingTxPackets = [];
-  }
 
   // activate any node whose moment has arrived (first time, or cycling back on),
   // wiring it to 1–3 of its nearest already-synced peers
@@ -1042,6 +1098,20 @@ function draw(){
     const emphasis = isGenesis ? (1.7 - 0.7*genesisFadeProgress) : (n.heroOrigin ? 1.8 : 1);
     const pulse = reduceMotion ? 1 : 0.85 + 0.15*Math.sin(t*0.6 + i*0.7);
 
+    // a pulse when a block just propagated to this node — grows to peak at
+    // the usual speed, then fades back down twice as slowly
+    const sinceBlockPulse = n.blockPulseAt !== undefined ? growth - n.blockPulseAt : Infinity;
+    let blockPulseBoost = 1;
+    if(!reduceMotion && sinceBlockPulse >= 0){
+      if(sinceBlockPulse <= BLOCK_PULSE_GROW_DURATION){
+        const gt = sinceBlockPulse / BLOCK_PULSE_GROW_DURATION;
+        blockPulseBoost = 1 + BLOCK_PULSE_AMPLITUDE * Math.sin(gt * Math.PI/2);
+      } else if(sinceBlockPulse <= BLOCK_PULSE_GROW_DURATION + BLOCK_PULSE_SHRINK_DURATION){
+        const st = (sinceBlockPulse - BLOCK_PULSE_GROW_DURATION) / BLOCK_PULSE_SHRINK_DURATION;
+        blockPulseBoost = 1 + BLOCK_PULSE_AMPLITUDE * Math.cos(st * Math.PI/2);
+      }
+    }
+
     // a quick bright flicker the moment a node switches on, settling back to normal —
     // the hero node gets a much bigger, slower-fading flash so it's unmistakable
     const sinceOn = growth - (n.activatedAt||0);
@@ -1050,7 +1120,7 @@ function draw(){
     const flick = reduceMotion ? 0 : Math.exp(-sinceOn*flickRate) * flickMag;
     const flickMix = Math.min(1, flick);
 
-    const r = 3.2 * pulse * n.life * emphasis * (1 + flick*0.9);
+    const r = 3.2 * pulse * n.life * emphasis * (1 + flick*0.9) * blockPulseBoost;
     const glow = 10 * (0.4 + 0.6*n.life) * emphasis * (1 + flick*1.3);
 
     const grad = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,glow);
@@ -1075,6 +1145,22 @@ function draw(){
     ctx.arc(n.x,n.y,Math.max(r,0.4),0,Math.PI*2);
     ctx.fill();
     ctx.globalAlpha = 1;
+
+    // distinct expanding ring, only at the exact moment this node originates a
+    // new block wave — separate from the arrival pulse, for precise timing
+    if(n.blockOriginFlashAt !== undefined){
+      const sinceFlash = growth - n.blockOriginFlashAt;
+      const flashT = sinceFlash / BLOCK_FLASH_DURATION;
+      if(flashT >= 0 && flashT <= 1){
+        const ringR = 4 + flashT * 30;
+        const ringAlpha = (1 - flashT) * 0.9;
+        ctx.strokeStyle = `rgba(255,255,255,${ringAlpha.toFixed(3)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, ringR, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
   });
 
   t += dt;
@@ -1103,7 +1189,7 @@ window.addEventListener('resize', () => {
   }
 });
 onScroll();
-draw();
+requestAnimationFrame(draw);
 
 /* ============ Venue map (dark CartoDB tiles over OpenStreetMap data) ============ */
 try{
