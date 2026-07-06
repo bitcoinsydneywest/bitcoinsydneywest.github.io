@@ -9,6 +9,11 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.30.0/date_fns.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
   :root{
     --bg:#07080a;
@@ -290,6 +295,23 @@
     line-height:1.5;
   }
 
+  .chart-wrap{
+    width:100%;
+    max-width:44rem;
+    height:22rem;
+    margin:0 auto;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1.2rem;
+  }
+  .chart-hint{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem;
+    color:var(--ink-dim);
+    margin-top:1rem;
+  }
+
   #support h2{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:1.2rem; }
   #support > p{ color:var(--ink-dim); max-width:30rem; margin-bottom:2.6rem; line-height:1.6; }
 
@@ -565,6 +587,10 @@
 
   <section id="btc-stats">
     <div class="eyebrow" style="justify-content:center;">Stats</div>
+    <div class="chart-wrap" style="margin-bottom:2rem;">
+      <canvas id="btc-chart"></canvas>
+    </div>
+    <div class="chart-hint" style="margin-bottom:1.6rem;">Scroll/pinch to zoom · drag to pan</div>
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-value" id="stat-cagr-4y">—</div>
@@ -806,6 +832,7 @@ const heroCollapse = document.getElementById('hero-collapse');
 const heroCollapseSpacer = document.getElementById('hero-collapse-spacer');
 let collapseTarget = {dx:0, dy:0, tx:0, ty:0};
 let heroNodeSpawned = false;
+let heroFullyShrunkAt = null;
 
 function setupHeroPosition(){
   // measure its natural, in-flow position first (reset any previous fixed styling)
@@ -989,6 +1016,19 @@ function draw(timestamp){
   // reliably happens even if a scroll event gets missed on some mobile browsers
   const heroCp = Math.max(0, Math.min(1, window.scrollY / (window.innerHeight*0.5)));
   if(heroCp >= 1) spawnHeroNode(collapseTarget.tx, collapseTarget.ty);
+
+  // once fully shrunk, hold briefly then fade out completely - runs on real
+  // time so it keeps progressing even without further scrolling
+  if(heroCp >= 1){
+    if(heroFullyShrunkAt === null) heroFullyShrunkAt = performance.now();
+    const elapsedMs = performance.now() - heroFullyShrunkAt;
+    const HOLD_MS = 400, FADE_MS = 1000;
+    const heroOpacity = elapsedMs <= HOLD_MS ? 1 : Math.max(0, 1 - (elapsedMs-HOLD_MS)/FADE_MS);
+    heroCollapse.style.opacity = heroOpacity.toFixed(3);
+  } else {
+    heroFullyShrunkAt = null;
+    heroCollapse.style.opacity = '1';
+  }
 
   // individual transactions trickle through continuously
   if(!reduceMotion && growth >= nextTxAt){
@@ -1360,6 +1400,89 @@ function renderEvents(events){
   }
   html += '</div>';
   calEl.innerHTML = html;
+}
+
+/* ============ Full-history price chart (log scale, via mempool.space) ============ */
+try{
+  if(typeof Chart === 'undefined') throw new Error('Chart.js did not load');
+
+  fetch('https://mempool.space/api/v1/historical-price?currency=USD')
+    .then(r=>{ if(!r.ok) throw new Error('historical-price request failed'); return r.json(); })
+    .then(data=>{
+      const points = (data.prices || [])
+        .filter(p => p.USD && p.USD > 0)
+        .map(p => ({ x: p.time*1000, y: p.USD }))
+        .sort((a,b)=>a.x-b.x);
+      if(points.length === 0) throw new Error('no price points returned');
+
+      const ctx = document.getElementById('btc-chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            data: points,
+            borderColor: '#f7931a',
+            backgroundColor: 'rgba(247,147,26,0.08)',
+            fill: true,
+            pointRadius: 0,
+            borderWidth: 1.6,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: {
+              type: 'time',
+              time: { unit: 'year' },
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              ticks: { color: '#9a9ea6', font: { family: 'IBM Plex Mono' } }
+            },
+            y: {
+              type: 'logarithmic',
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              ticks: {
+                color: '#9a9ea6',
+                font: { family: 'IBM Plex Mono' },
+                callback: v => '$' + v.toLocaleString('en-US')
+              }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#15181e',
+              borderColor: '#23262d',
+              borderWidth: 1,
+              titleFont: { family: 'IBM Plex Mono' },
+              bodyFont: { family: 'IBM Plex Mono' },
+              callbacks: {
+                label: (item)=> '$' + Math.round(item.parsed.y).toLocaleString('en-US')
+              }
+            },
+            zoom: {
+              pan: { enabled: true, mode: 'x' },
+              zoom: {
+                wheel: { enabled: true },
+                pinch: { enabled: true },
+                mode: 'x'
+              }
+            }
+          }
+        }
+      });
+    })
+    .catch(err=>{
+      console.error('Price chart failed to load:', err);
+      const wrap = document.querySelector('.chart-wrap');
+      if(wrap) wrap.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-family:IBM Plex Mono,monospace;font-size:0.8rem;color:#8a8f98;text-align:center;padding:1rem;">Chart unavailable right now - try refreshing.</div>';
+    });
+}catch(err){
+  console.error('Price chart setup failed:', err);
+  const wrap = document.querySelector('.chart-wrap');
+  if(wrap) wrap.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-family:IBM Plex Mono,monospace;font-size:0.8rem;color:#8a8f98;text-align:center;padding:1rem;">Chart unavailable right now - try refreshing.</div>';
 }
 
 /* ============ Bitcoin stats (live price/CAGR via mempool.space, halving countdown) ============
