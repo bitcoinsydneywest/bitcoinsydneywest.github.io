@@ -249,6 +249,47 @@
   #join p{ color:var(--ink-dim); max-width:30rem; margin-bottom:2.2rem; line-height:1.6; }
 
   /* SUPPORT / DONATE */
+  #btc-stats h2{ font-size:clamp(1.6rem, 3.4vw, 2.1rem); margin-bottom:2.2rem; }
+  .stats-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:1.2rem;
+    justify-content:center;
+    max-width:44rem;
+    margin:0 auto;
+  }
+  .stat-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1.4rem 1.2rem;
+    min-width:9rem;
+    flex:1 1 9rem;
+  }
+  .stat-value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:clamp(1.3rem, 3vw, 1.7rem);
+    font-weight:600;
+    color:var(--orange);
+    font-variant-numeric:tabular-nums;
+  }
+  .stat-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-top:0.5rem;
+  }
+  .stats-note{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem;
+    color:var(--ink-dim);
+    max-width:26rem;
+    margin:1.6rem auto 0;
+    line-height:1.5;
+  }
+
   #support h2{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:1.2rem; }
   #support > p{ color:var(--ink-dim); max-width:30rem; margin-bottom:2.6rem; line-height:1.6; }
 
@@ -519,6 +560,28 @@
     <div class="other-meetups-item" style="margin:2rem 0 0;">
       <div class="oml-label">Other Bitcoin meetups worldwide</div>
       <a href="https://bitcoin-only.com/meetups" target="_blank" rel="noopener">bitcoin-only.com/meetups</a>
+    </div>
+  </section>
+
+  <section id="btc-stats">
+    <div class="eyebrow" style="justify-content:center;">Stats</div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-cagr-4y">—</div>
+        <div class="stat-label">4-year CAGR</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-cagr-10y">—</div>
+        <div class="stat-label">10-year CAGR</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-price">—</div>
+        <div class="stat-label">BTC price now</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-halving">—</div>
+        <div class="stat-label">approx. to next halving</div>
+      </div>
     </div>
   </section>
 
@@ -867,7 +930,6 @@ function spawnPropagation(kind){
     if(u === -1) break;
     settled[u] = true;
 
-    const maxEdgeLen = Math.min(W,H) * 0.22; // skip the rare long "fallback" connections between distant nodes
     edgesTouching(u).forEach(e=>{
       const v = e.a === u ? e.b : e.a;
       if(settled[v]) return;
@@ -875,7 +937,6 @@ function spawnPropagation(kind){
       if(Math.random() < TX_RELAY_SKIP_CHANCE) return; // this path sometimes just isn't used
 
       const edgeLen = Math.hypot(nodes[u].x-nodes[v].x, nodes[u].y-nodes[v].y);
-      if(edgeLen > maxEdgeLen) return; // too far to look like a normal hop - route around it instead
       const newDist = dist[u] + edgeLen;
       if(newDist < dist[v]){
         dist[v] = newDist;
@@ -1300,6 +1361,71 @@ function renderEvents(events){
   html += '</div>';
   calEl.innerHTML = html;
 }
+
+/* ============ Bitcoin stats (live price/CAGR via mempool.space, halving countdown) ============
+   mempool.space is used instead of a general crypto API since it's Bitcoin-only,
+   free, and requires no signup or API key - consistent with the rest of the site. */
+try{
+  const NEXT_HALVING = new Date('2028-04-17T00:00:00Z'); // ~block 1,050,000, per current network estimates
+
+  function formatUsd(n){
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+  function formatAud(n){
+    return 'A$' + Math.round(n).toLocaleString('en-US');
+  }
+
+  function formatHalvingCountdown(target){
+    const now = new Date();
+    let months = (target.getFullYear()-now.getFullYear())*12 + (target.getMonth()-now.getMonth());
+    if(target.getDate() < now.getDate()) months -= 1;
+    if(months < 0) return 'Halving has occurred';
+    const years = Math.floor(months/12);
+    const remMonths = months % 12;
+    const parts = [];
+    if(years > 0) parts.push(`${years} year${years===1?'':'s'}`);
+    parts.push(`${remMonths} month${remMonths===1?'':'s'}`);
+    return parts.join(', ');
+  }
+
+  document.getElementById('stat-halving').textContent = formatHalvingCountdown(NEXT_HALVING);
+
+  const now = new Date();
+  const date4y = new Date(now); date4y.setFullYear(now.getFullYear()-4);
+  const date10y = new Date(now); date10y.setFullYear(now.getFullYear()-10);
+  const ts4y = Math.floor(date4y.getTime()/1000);
+  const ts10y = Math.floor(date10y.getTime()/1000);
+
+  const priceUrl = 'https://mempool.space/api/v1/prices';
+  const hist4yUrl = `https://mempool.space/api/v1/historical-price?currency=USD&timestamp=${ts4y}`;
+  const hist10yUrl = `https://mempool.space/api/v1/historical-price?currency=USD&timestamp=${ts10y}`;
+
+  Promise.all([
+    fetch(priceUrl).then(r=>r.json()),
+    fetch(hist4yUrl).then(r=>r.json()),
+    fetch(hist10yUrl).then(r=>r.json())
+  ]).then(([current, hist4y, hist10y])=>{
+    const currentUsd = current.USD;
+    const currentAud = current.AUD;
+    document.getElementById('stat-price').innerHTML =
+      `${formatUsd(currentUsd)}<br><span style="font-size:0.6em; color:var(--ink-dim);">${formatAud(currentAud)}</span>`;
+
+    const price4yAgo = hist4y.prices[0].USD;
+    const price10yAgo = hist10y.prices[0].USD;
+
+    const cagr4y = (Math.pow(currentUsd/price4yAgo, 1/4) - 1) * 100;
+    const cagr10y = (Math.pow(currentUsd/price10yAgo, 1/10) - 1) * 100;
+
+    document.getElementById('stat-cagr-4y').textContent = (cagr4y>=0?'+':'') + cagr4y.toFixed(1) + '%';
+    document.getElementById('stat-cagr-10y').textContent = (cagr10y>=0?'+':'') + cagr10y.toFixed(1) + '%';
+  }).catch(err=>{
+    console.error('BTC stats fetch failed:', err);
+    ['stat-cagr-4y','stat-cagr-10y','stat-price'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.textContent = 'N/A';
+    });
+  });
+}catch(err){ console.error('BTC stats setup failed:', err); }
 
 /* ============ Countdown (driven by the next "Sydney West" event) ============ */
 function showNoMeetupFound(){
