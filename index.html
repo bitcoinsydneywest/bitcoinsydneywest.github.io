@@ -252,7 +252,83 @@
   #support h2{ font-size:clamp(1.8rem, 4vw, 2.6rem); margin-bottom:1.2rem; }
   #support > p{ color:var(--ink-dim); max-width:30rem; margin-bottom:2.6rem; line-height:1.6; }
 
+  #upcoming-events h2{ font-size:clamp(1.6rem, 3.4vw, 2.1rem); margin-bottom:2.2rem; }
   #other-meetups h2{ font-size:clamp(1.6rem, 3.4vw, 2.1rem); margin-bottom:2.2rem; }
+  .events-wrap{
+    display:flex;
+    flex-wrap:wrap;
+    gap:2.4rem;
+    justify-content:center;
+    align-items:flex-start;
+    max-width:44rem;
+    margin:0 auto;
+  }
+  .events-list{
+    flex:1 1 18rem;
+    max-width:22rem;
+    text-align:left;
+  }
+  .events-loading{ color:var(--ink-dim); font-size:0.85rem; text-align:center; }
+  .event-item{
+    border-bottom:1px solid var(--line);
+    padding:0.9rem 0;
+  }
+  .event-item:first-child{ padding-top:0; }
+  .event-item a{
+    color:var(--ink);
+    text-decoration:none;
+    font-weight:500;
+    font-size:0.95rem;
+  }
+  .event-item a:hover{ color:var(--orange); }
+  .event-item .event-date{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    color:var(--orange);
+    letter-spacing:0.04em;
+    margin-top:0.3rem;
+  }
+  .events-calendar{
+    flex:0 0 16rem;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1rem 1.1rem 1.2rem;
+  }
+  .cal-header{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.78rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    text-align:center;
+    margin-bottom:0.8rem;
+  }
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:0.25rem;
+    text-align:center;
+  }
+  .cal-dow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.6rem;
+    color:var(--ink-dim);
+    text-transform:uppercase;
+  }
+  .cal-day{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    color:var(--ink-dim);
+    padding:0.35rem 0;
+    border-radius:4px;
+  }
+  .cal-day.has-event{
+    color:var(--ink);
+    background:rgba(247,147,26,0.18);
+    font-weight:600;
+  }
+  .cal-day.empty{ visibility:hidden; }
   .other-meetups-list{
     display:flex;
     flex-direction:column;
@@ -391,7 +467,7 @@
       <a class="btn btn-primary" href="#" id="signal-btn-hero">Join the Signal group →</a>
     </div>
     <div class="eyebrow" style="justify-content:center; margin-top:2rem; margin-bottom:0;">Next meetup</div>
-    <div class="meetup-loc">Next meetup at <b>Bella Vista Hotel</b> in:</div>
+    <div class="meetup-loc" id="meetup-loc">Loading next meetup…</div>
     <div class="countdown" id="countdown" style="margin-top:0.8rem;">
       <div class="unit"><div class="num" id="cd-days">00</div><div class="lbl">Days</div></div>
       <div class="unit"><div class="num" id="cd-hours">00</div><div class="lbl">Hours</div></div>
@@ -433,6 +509,17 @@
     <h2>Same peers. New block.</h2>
     <div class="btn-row" style="margin-top:1.6rem;">
       <a class="btn btn-ghost" href="#" id="rsvp-btn">RSVP on Satlantis →</a>
+    </div>
+  </section>
+
+  <section id="upcoming-events">
+    <div class="eyebrow" style="justify-content:center;">Upcoming Sydney meetups</div>
+    <h2>Straight from Meetup</h2>
+    <div class="events-wrap">
+      <div id="events-list" class="events-list">
+        <div class="events-loading">Loading upcoming events…</div>
+      </div>
+      <div id="events-calendar" class="events-calendar"></div>
     </div>
   </section>
 
@@ -490,7 +577,6 @@ const CONFIG = {
   signalLink: "https://signal.group/#CjQKIP3YduOOQrSFtS7WURCDTEOoLr8zU2JkFHc9ANLLWmU1EhD0_bJY__HhAiZD68e4Ibhg",
   rsvpLink: "https://www.satlantis.io/c/68/bitcoin-sydney-meetups",
   accessCode: "1000",
-  nextMeetupISO: "2026-07-21T19:00:00+10:00", // Next meetup: July 21st, 7:00 PM
   lightningAddress: "yourname@REPLACE_WITH_YOUR_LN_ADDRESS"
 };
 
@@ -640,6 +726,12 @@ function buildNetwork(){
     nodes[i].onTime = slotStart + Math.random()*slotSize;
   }
 
+  // the first two non-genesis nodes turn on almost immediately, so the
+  // connection animation gets going within the first moment of page load
+  const EARLY_NODE_WINDOW = 0.4 * SPEED_FACTOR; // real ~0.4s
+  if(nodes.length > 1) nodes[1].onTime = Math.random() * EARLY_NODE_WINDOW;
+  if(nodes.length > 2) nodes[2].onTime = Math.random() * EARLY_NODE_WINDOW;
+
   // each node's nearest neighbours, precomputed once since positions are static
   const maxNeighbourDist = minWH*0.22;
   neighborLists = nodes.map((n,i)=>{
@@ -737,51 +829,63 @@ const GENESIS_FADE_TIME = 2 * SPEED_FACTOR; // real ~2s fade to normal color onc
 const HERO_LINE_DELAY = 0.05 * SPEED_FACTOR; // near-instant — the hero node needs to connect fast, before it scrolls off
 const HERO_LINE_DRAW_TIME = 0.5 * SPEED_FACTOR; // real ~0.5s, much quicker than the normal 4s draw
 
-/* ============ Transaction broadcasts ============
-   Small packets that originate at a random synced node and ripple outward
-   hop-by-hop through the mesh, like a transaction being gossiped across the
-   real Bitcoin p2p network — only synced nodes can originate or relay one. */
+/* ============ Transaction & block propagation ============
+   Two layers, matching how Bitcoin actually works:
+   1) Individual transactions — small, dim, frequent, gossiped continuously
+      node-to-node as they occur.
+   2) Block propagation — bigger, brighter, on a regular interval, standing
+      in for a miner's block sweeping through and confirming everything at
+      once. Real blocks arrive roughly every 10 minutes; compressed here to
+      every 10 seconds so the animation reads as ongoing activity.
+   Both ripple hop-by-hop through the mesh the same way; only synced nodes
+   can originate or relay either kind. */
 let txPackets = [];
 let pendingTxPackets = []; // newly-relayed packets, merged in after this frame's filter runs
-let nextTxAt = 2 * SPEED_FACTOR + Math.random() * 4 * SPEED_FACTOR;
-const TX_TRAVEL_TIME = 1 * SPEED_FACTOR;      // real ~1s per hop, visible movement node-to-node
 const TX_MAX_HOPS = Infinity;                // no cap — ripples out until every reachable node has it
 const TX_RELAY_SKIP_CHANCE = 0.15;            // a peer that's already "heard" it sometimes doesn't relay
-const TX_INTERVAL_MIN = 8 * SPEED_FACTOR, TX_INTERVAL_MAX = 25 * SPEED_FACTOR; // real 8-25s between bursts
-const TX_MAX_CONCURRENT = 18; // hard cap on simultaneous packets, for clarity and performance
+const TX_MAX_CONCURRENT = 18;                 // hard cap on simultaneous packets, for clarity and performance
+
+const TX_TRAVEL_TIME = 1 * SPEED_FACTOR;      // real ~1s per hop, visible movement node-to-node
+let nextTxAt = 1 * SPEED_FACTOR;
+const TX_INTERVAL_MIN = 1 * SPEED_FACTOR, TX_INTERVAL_MAX = 3 * SPEED_FACTOR; // small trickle, every 1-3s
+
+const BLOCK_TRAVEL_TIME = 0.28 * SPEED_FACTOR; // ~3.5x faster than a transaction hop
+let nextBlockAt = 4 * SPEED_FACTOR;
+const BLOCK_INTERVAL = 10 * SPEED_FACTOR;     // a new block propagates every 10 real seconds
 
 function edgesTouching(nodeIdx){
   return liveEdges.filter(e => (e.a === nodeIdx || e.b === nodeIdx) && e.dyingAt === null);
 }
 
-function propagateTx(fromNode, cameFrom, txId, visited, hopsLeft){
+function propagateTx(fromNode, cameFrom, txId, visited, hopsLeft, kind){
   if(hopsLeft <= 0) return;
   edgesTouching(fromNode).forEach(e=>{
     if(txPackets.length + pendingTxPackets.length >= TX_MAX_CONCURRENT) return;
     const other = e.a === fromNode ? e.b : e.a;
     if(other === cameFrom || visited.has(other)) return;
-    // a node can't accept/relay a transaction until it's finished syncing itself
+    // a node can't accept/relay anything until it's finished syncing itself
     if(!nodes[other].activated || !nodes[other].synced) return;
-    if(Math.random() < TX_RELAY_SKIP_CHANCE) return; // already-known tx, doesn't relay it again
+    if(Math.random() < TX_RELAY_SKIP_CHANCE) return; // already-known, doesn't relay it again
     const nextVisited = new Set(visited);
     nextVisited.add(other);
     pendingTxPackets.push({
-      from: fromNode, to: other, startedAt: growth, arrived: false,
+      from: fromNode, to: other, startedAt: growth, arrived: false, kind,
+      duration: kind === 'block' ? BLOCK_TRAVEL_TIME : TX_TRAVEL_TIME,
       onArrive(){
         const n = nodes[other];
-        if(n && n.activated && n.synced) propagateTx(other, fromNode, txId, nextVisited, hopsLeft - 1);
+        if(n && n.activated && n.synced) propagateTx(other, fromNode, txId, nextVisited, hopsLeft - 1, kind);
       }
     });
   });
 }
 
-function spawnTransaction(){
+function spawnPropagation(kind){
   if(txPackets.length + pendingTxPackets.length >= TX_MAX_CONCURRENT) return;
   const candidates = [];
   nodes.forEach((n,i)=>{ if(n.activated && n.synced) candidates.push(i); });
   if(candidates.length === 0) return;
   const origin = candidates[Math.floor(Math.random()*candidates.length)];
-  propagateTx(origin, -1, Math.random().toString(36).slice(2), new Set([origin]), TX_MAX_HOPS);
+  propagateTx(origin, -1, Math.random().toString(36).slice(2), new Set([origin]), TX_MAX_HOPS, kind);
 }
 
 let t = 0;
@@ -799,11 +903,16 @@ function draw(){
   const heroCp = Math.max(0, Math.min(1, window.scrollY / (window.innerHeight*0.5)));
   if(heroCp >= 1) spawnHeroNode(collapseTarget.tx, collapseTarget.ty);
 
-  // sporadic transaction broadcasts — occasionally a small burst of several at once
+  // individual transactions trickle through continuously
   if(!reduceMotion && growth >= nextTxAt){
-    const burst = Math.random() < 0.3 ? 2 + Math.floor(Math.random()*3) : 1;
-    for(let k=0;k<burst;k++) spawnTransaction();
+    spawnPropagation('tx');
     nextTxAt = growth + TX_INTERVAL_MIN + Math.random()*(TX_INTERVAL_MAX-TX_INTERVAL_MIN);
+  }
+
+  // a new block propagates through the network every 10 seconds
+  if(!reduceMotion && growth >= nextBlockAt){
+    spawnPropagation('block');
+    nextBlockAt = growth + BLOCK_INTERVAL;
   }
 
   txPackets = txPackets.filter(p=>{
@@ -811,26 +920,28 @@ function draw(){
     if(!a || !b) return false;
     const progress = Math.min(1, (growth - p.startedAt)/(p.duration || TX_TRAVEL_TIME));
     const x = a.x + (b.x-a.x)*progress, y = a.y + (b.y-a.y)*progress;
+    const isBlock = p.kind === 'block';
+    const r = isBlock ? 5.6 : 2.4;
 
     // trailing glow/streak behind the packet
-    const trailBack = Math.max(0, progress - 0.16);
+    const trailBack = Math.max(0, progress - (isBlock ? 0.2 : 0.12));
     const tx0 = a.x + (b.x-a.x)*trailBack, ty0 = a.y + (b.y-a.y)*trailBack;
     const trailGrad = ctx.createLinearGradient(tx0,ty0,x,y);
     trailGrad.addColorStop(0, 'rgba(255,207,138,0)');
-    trailGrad.addColorStop(1, 'rgba(255,207,138,0.35)');
+    trailGrad.addColorStop(1, `rgba(255,207,138,${isBlock ? 0.5 : 0.22})`);
     ctx.strokeStyle = trailGrad;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = isBlock ? 1.8 : 0.8;
     ctx.beginPath();
     ctx.moveTo(tx0,ty0); ctx.lineTo(x,y);
     ctx.stroke();
 
     // the packet itself
-    const grad = ctx.createRadialGradient(x,y,0,x,y,3.2);
-    grad.addColorStop(0, 'rgba(255,235,200,0.55)');
+    const grad = ctx.createRadialGradient(x,y,0,x,y,r);
+    grad.addColorStop(0, `rgba(255,235,200,${isBlock ? 0.6 : 0.4})`);
     grad.addColorStop(1, 'rgba(255,207,138,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(x,y,3.2,0,Math.PI*2);
+    ctx.arc(x,y,r,0,Math.PI*2);
     ctx.fill();
 
     if(progress >= 1 && !p.arrived){
@@ -1063,24 +1174,111 @@ try{
   if(el) el.innerHTML = '<div style="width:130px;height:130px;display:flex;align-items:center;justify-content:center;font-family:IBM Plex Mono,monospace;font-size:0.65rem;color:#8a8f98;text-align:center;padding:0.5rem;">QR unavailable - use address below</div>';
 }
 
-/* ============ Countdown ============ */
+/* ============ Upcoming Sydney meetups (from events.json, synced daily from Meetup) ============
+   The same feed also drives the hero countdown: it finds the soonest upcoming
+   event whose title contains "Sydney West" and counts down to that. */
 try{
-  const target = new Date(CONFIG.nextMeetupISO).getTime();
-  function tickCountdown(){
-    const now = Date.now();
-    let diff = Math.max(0, target - now);
-    const d = Math.floor(diff/86400000);
-    const h = Math.floor(diff%86400000/3600000);
-    const m = Math.floor(diff%3600000/60000);
-    const s = Math.floor(diff%60000/1000);
-    document.getElementById('cd-days').textContent = String(d).padStart(2,'0');
-    document.getElementById('cd-hours').textContent = String(h).padStart(2,'0');
-    document.getElementById('cd-mins').textContent = String(m).padStart(2,'0');
-    document.getElementById('cd-secs').textContent = String(s).padStart(2,'0');
+  fetch('events.json', {cache: 'no-store'})
+    .then(r => { if(!r.ok) throw new Error('events.json not found'); return r.json(); })
+    .then(data => {
+      const events = data.events || [];
+      renderEvents(events);
+      startCountdownFromEvents(events);
+    })
+    .catch(err => {
+      console.error('Could not load events.json:', err);
+      const listEl = document.getElementById('events-list');
+      if(listEl) listEl.innerHTML = '<div class="events-loading">Events unavailable right now - check the Meetup link below.</div>';
+      showNoMeetupFound();
+    });
+}catch(err){ console.error('Events fetch setup failed:', err); }
+
+function renderEvents(events){
+  const listEl = document.getElementById('events-list');
+  const calEl = document.getElementById('events-calendar');
+  if(!listEl || !calEl) return;
+
+  if(events.length === 0){
+    listEl.innerHTML = '<div class="events-loading">No upcoming events listed right now.</div>';
+  } else {
+    const fmt = new Intl.DateTimeFormat('en-AU', { weekday:'short', day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+    listEl.innerHTML = events.map(ev=>{
+      const d = new Date(ev.start);
+      const dateStr = isNaN(d) ? '' : fmt.format(d);
+      const title = ev.url
+        ? `<a href="${ev.url}" target="_blank" rel="noopener">${ev.title}</a>`
+        : ev.title;
+      return `<div class="event-item">${title}<div class="event-date">${dateStr}</div></div>`;
+    }).join('');
   }
-  tickCountdown();
-  setInterval(tickCountdown, 1000);
-}catch(err){ console.error('Countdown failed:', err); }
+
+  // mini calendar for the current month, marking which days have an event
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const monthName = now.toLocaleString('en-AU', { month:'long', year:'numeric' });
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const startOffset = firstDay.getDay(); // 0=Sun
+
+  const eventDays = new Set();
+  events.forEach(ev=>{
+    const d = new Date(ev.start);
+    if(!isNaN(d) && d.getFullYear()===year && d.getMonth()===month) eventDays.add(d.getDate());
+  });
+
+  let html = `<div class="cal-header">${monthName}</div><div class="cal-grid">`;
+  ['S','M','T','W','T','F','S'].forEach(d=> html += `<div class="cal-dow">${d}</div>`);
+  for(let i=0;i<startOffset;i++) html += '<div class="cal-day empty"></div>';
+  for(let day=1; day<=daysInMonth; day++){
+    const cls = eventDays.has(day) ? 'cal-day has-event' : 'cal-day';
+    html += `<div class="${cls}">${day}</div>`;
+  }
+  html += '</div>';
+  calEl.innerHTML = html;
+}
+
+/* ============ Countdown (driven by the next "Sydney West" event) ============ */
+function showNoMeetupFound(){
+  const loc = document.getElementById('meetup-loc');
+  if(loc) loc.textContent = "Check Meetup for the next Sydney West date";
+  const countdownEl = document.getElementById('countdown');
+  if(countdownEl) countdownEl.style.display = 'none';
+}
+
+function startCountdownFromEvents(events){
+  const nextSydneyWest = events.find(ev => (ev.title||'').toLowerCase().includes('sydney west'));
+  if(!nextSydneyWest){ showNoMeetupFound(); return; }
+
+  const target = new Date(nextSydneyWest.start).getTime();
+  if(isNaN(target)){ showNoMeetupFound(); return; }
+
+  const locEl = document.getElementById('meetup-loc');
+  if(locEl){
+    // venue name is usually the part before the first comma in LOCATION, e.g.
+    // "Bella Vista Hotel, 13-15 Lexington Drive, Bella Vista NSW"
+    const venue = (nextSydneyWest.location || '').split(',')[0].trim();
+    locEl.innerHTML = venue
+      ? `Next meetup at <b>${venue}</b> in:`
+      : `Next meetup in:`;
+  }
+
+  try{
+    function tickCountdown(){
+      const now = Date.now();
+      let diff = Math.max(0, target - now);
+      const d = Math.floor(diff/86400000);
+      const h = Math.floor(diff%86400000/3600000);
+      const m = Math.floor(diff%3600000/60000);
+      const s = Math.floor(diff%60000/1000);
+      document.getElementById('cd-days').textContent = String(d).padStart(2,'0');
+      document.getElementById('cd-hours').textContent = String(h).padStart(2,'0');
+      document.getElementById('cd-mins').textContent = String(m).padStart(2,'0');
+      document.getElementById('cd-secs').textContent = String(s).padStart(2,'0');
+    }
+    tickCountdown();
+    setInterval(tickCountdown, 1000);
+  }catch(err){ console.error('Countdown failed:', err); }
+}
 
 
 </script>
