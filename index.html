@@ -498,43 +498,23 @@
     </div>
   </section>
 
-  <section id="location">
-    <div class="eyebrow" style="justify-content:center;">Location</div>
-    <div class="venue-map"><div id="venue-map-hero"></div></div>
-    <div class="venue-address">13-15 Lexington Drive, Bella Vista NSW 2153</div>
-  </section>
-
-  <section id="meetup">
-    <div class="eyebrow">Next meetup</div>
-    <h2>Same peers. New block.</h2>
-    <div class="btn-row" style="margin-top:1.6rem;">
-      <a class="btn btn-ghost" href="#" id="rsvp-btn">RSVP on Satlantis →</a>
-    </div>
-  </section>
-
   <section id="upcoming-events">
     <div class="eyebrow" style="justify-content:center;">Upcoming Sydney meetups</div>
-    <h2>Straight from Meetup</h2>
+    <h2>Upcoming events</h2>
+    <div class="venue-map"><div id="venue-map-hero"></div></div>
+    <div class="other-meetups-item" style="margin:1.6rem 0 2rem;">
+      <div class="oml-label">Other Bitcoin meetups worldwide</div>
+      <a href="https://bitcoin-only.com/meetups" target="_blank" rel="noopener">bitcoin-only.com/meetups</a>
+    </div>
     <div class="events-wrap">
       <div id="events-list" class="events-list">
         <div class="events-loading">Loading upcoming events…</div>
       </div>
       <div id="events-calendar" class="events-calendar"></div>
     </div>
-  </section>
-
-  <section id="other-meetups">
-    <div class="eyebrow" style="justify-content:center;">Keep exploring</div>
-    <h2>More Bitcoin, more often</h2>
-    <div class="other-meetups-list">
-      <div class="other-meetups-item">
-        <div class="oml-label">Upcoming Sydney meetups</div>
-        <a href="https://www.meetup.com/bitcoin_sydney/events/calendar/" target="_blank" rel="noopener">meetup.com/bitcoin_sydney/events/calendar</a>
-      </div>
-      <div class="other-meetups-item">
-        <div class="oml-label">Other Bitcoin meetups worldwide</div>
-        <a href="https://bitcoin-only.com/meetups" target="_blank" rel="noopener">bitcoin-only.com/meetups</a>
-      </div>
+    <div class="btn-row" style="margin-top:2rem;">
+      <a class="btn btn-ghost" href="https://www.meetup.com/bitcoin_sydney/events/calendar/" target="_blank" rel="noopener">View events on Meetup →</a>
+      <a class="btn btn-ghost" href="https://www.satlantis.io/c/68/bitcoin-sydney-meetups" target="_blank" rel="noopener">View events on Satlantis →</a>
     </div>
   </section>
 
@@ -581,8 +561,6 @@ const CONFIG = {
 };
 
 try{
-  document.getElementById('rsvp-btn').href = CONFIG.rsvpLink;
-
   // Signal buttons open a 4-digit code gate instead of linking straight out —
   // the code is only given out to people who've attended in person
   const overlay = document.getElementById('code-modal-overlay');
