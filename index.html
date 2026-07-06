@@ -1417,7 +1417,7 @@ try{
       if(points.length === 0) throw new Error('no price points returned');
 
       const ctx = document.getElementById('btc-chart').getContext('2d');
-      new Chart(ctx, {
+      const chart = new Chart(ctx, {
         type: 'line',
         data: {
           datasets: [{
@@ -1464,16 +1464,29 @@ try{
               }
             },
             zoom: {
-              pan: { enabled: true, mode: 'x' },
+              pan: { enabled: true, mode: 'x', onPanComplete: applyDynamicYHeadroom },
               zoom: {
                 wheel: { enabled: true },
                 pinch: { enabled: true },
-                mode: 'x'
+                mode: 'x',
+                onZoomComplete: applyDynamicYHeadroom
               }
             }
           }
         }
       });
+
+      // keeps 20% of headroom above whatever the highest price is in the
+      // currently visible x-range, recalculating every time you zoom or pan
+      function applyDynamicYHeadroom({chart}){
+        const xScale = chart.scales.x;
+        const visible = points.filter(p => p.x >= xScale.min && p.x <= xScale.max);
+        if(visible.length === 0) return;
+        const maxVisible = Math.max(...visible.map(p=>p.y));
+        chart.options.scales.y.max = maxVisible * 1.2;
+        chart.update('none');
+      }
+      applyDynamicYHeadroom({chart});
     })
     .catch(err=>{
       console.error('Price chart failed to load:', err);
