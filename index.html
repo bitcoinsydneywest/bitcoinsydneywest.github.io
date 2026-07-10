@@ -12,8 +12,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.30.0/date_fns.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
   :root{
     --bg:#07080a;
@@ -293,6 +291,80 @@
     max-width:26rem;
     margin:1.6rem auto 0;
     line-height:1.5;
+  }
+
+  .compare-expander{ max-width:44rem; margin:2rem auto 0; text-align:left; }
+  .compare-toggle{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1rem 1.2rem;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.85rem;
+    text-align:left;
+    cursor:pointer;
+  }
+  .compare-toggle:hover{ border-color:var(--orange); }
+  .compare-arrow{ color:var(--orange); transition:transform 0.2s ease; flex:none; }
+  .compare-toggle.open .compare-arrow{ transform:rotate(180deg); }
+  .compare-panel{ margin-top:1.2rem; }
+  .compare-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:1.2rem;
+  }
+  .compare-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:1rem;
+  }
+  .compare-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:0.6rem;
+  }
+  .compare-pct{
+    color:var(--orange);
+    font-weight:600;
+    letter-spacing:0;
+  }
+  .compare-chart-wrap{ position:relative; height:9rem; width:100%; }
+  .compare-card canvas{ width:100% !important; height:100% !important; }
+  .compare-range-row{
+    display:flex;
+    gap:0.4rem;
+    justify-content:center;
+    margin-top:0.6rem;
+  }
+  .range-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.62rem;
+    letter-spacing:0.04em;
+    color:var(--ink-dim);
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:0.2rem 0.55rem;
+    cursor:pointer;
+  }
+  .range-btn:hover{ border-color:var(--orange); color:var(--ink); }
+  .range-btn.active{
+    background:rgba(247,147,26,0.14);
+    border-color:var(--orange);
+    color:var(--orange);
+  }
+  @media (max-width:36rem){
+    .compare-grid{ grid-template-columns:1fr; }
   }
 
   .chart-wrap{
@@ -588,10 +660,14 @@
 
   <section id="btc-stats">
     <div class="eyebrow" style="justify-content:center;">Stats</div>
-    <div class="chart-wrap" style="margin-bottom:2rem;">
+    <div class="chart-wrap" style="margin-bottom:1rem;">
       <canvas id="btc-chart"></canvas>
     </div>
-    <div class="chart-hint" style="margin-bottom:1.6rem;">Scroll/pinch to zoom · drag to pan</div>
+    <div class="compare-range-row" id="chart-range-row" style="margin-bottom:1.6rem;">
+      <button type="button" class="range-btn active" data-years="15">15Y</button>
+      <button type="button" class="range-btn" data-years="10">10Y</button>
+      <button type="button" class="range-btn" data-years="5">5Y</button>
+    </div>
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-value" id="stat-cagr-4y">—</div>
@@ -608,6 +684,63 @@
       <div class="stat-card">
         <div class="stat-value" id="stat-halving">—</div>
         <div class="stat-label">approx. to next halving</div>
+      </div>
+    </div>
+
+    <div class="compare-expander">
+      <button type="button" class="compare-toggle" id="compare-toggle">
+        <span>How have other investments performed compared with Bitcoin</span>
+        <span class="compare-arrow">▾</span>
+      </button>
+      <div class="compare-panel" id="compare-panel" hidden>
+        <div class="compare-grid">
+          <div class="compare-card">
+            <div class="compare-label">US stocks (S&amp;P 500) <span class="compare-pct" id="pct-sp500">—</span></div>
+            <div class="compare-chart-wrap"><canvas id="chart-sp500"></canvas></div>
+            <div class="compare-range-row" data-key="sp500">
+              <button type="button" class="range-btn active" data-years="10">10Y</button>
+              <button type="button" class="range-btn" data-years="9">9Y</button>
+              <button type="button" class="range-btn" data-years="5">5Y</button>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-label">Gold <span class="compare-pct" id="pct-gold">—</span></div>
+            <div class="compare-chart-wrap"><canvas id="chart-gold"></canvas></div>
+            <div class="compare-range-row" data-key="gold">
+              <button type="button" class="range-btn active" data-years="10">10Y</button>
+              <button type="button" class="range-btn" data-years="9">9Y</button>
+              <button type="button" class="range-btn" data-years="5">5Y</button>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-label">Silver <span class="compare-pct" id="pct-silver">—</span></div>
+            <div class="compare-chart-wrap"><canvas id="chart-silver"></canvas></div>
+            <div class="compare-range-row" data-key="silver">
+              <button type="button" class="range-btn active" data-years="10">10Y</button>
+              <button type="button" class="range-btn" data-years="9">9Y</button>
+              <button type="button" class="range-btn" data-years="5">5Y</button>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-label">Sydney property <span class="compare-pct" id="pct-sydney">—</span></div>
+            <div class="compare-chart-wrap"><canvas id="chart-sydney"></canvas></div>
+            <div class="compare-range-row" data-key="sydney">
+              <button type="button" class="range-btn active" data-years="10">10Y</button>
+              <button type="button" class="range-btn" data-years="9">9Y</button>
+              <button type="button" class="range-btn" data-years="5">5Y</button>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-label">Australian stocks (ASX 200) <span class="compare-pct" id="pct-asx200">—</span></div>
+            <div class="compare-chart-wrap"><canvas id="chart-asx200"></canvas></div>
+            <div class="compare-range-row" data-key="asx200">
+              <button type="button" class="range-btn active" data-years="10">10Y</button>
+              <button type="button" class="range-btn" data-years="9">9Y</button>
+              <button type="button" class="range-btn" data-years="5">5Y</button>
+            </div>
+          </div>
+        </div>
+        <div class="stats-note">Indexed to 100 at 2016, priced in Bitcoin. Approximate figures from historical price research, not live data.</div>
       </div>
     </div>
   </section>
@@ -708,6 +841,7 @@ try{
     overlay.setAttribute('aria-hidden', 'true');
     clearInterval(lockoutTimer);
   }
+
   function submitCode(){
     if(input.disabled) return;
     if(input.value.trim() === CONFIG.accessCode){
@@ -1403,6 +1537,138 @@ function renderEvents(events){
   calEl.innerHTML = html;
 }
 
+/* ============ "How have other investments performed" expander + mini charts ============
+   Approximate yearly (July) figures from historical research, indexed to 100 at 2016 and
+   priced in Bitcoin - not live data, unlike the rest of the Stats section. */
+try{
+  const toggle = document.getElementById('compare-toggle');
+  const panel = document.getElementById('compare-panel');
+  let compareChartsBuilt = false;
+
+  const YEARS = [2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
+  const BTC_USD =    [650, 2500, 7500, 10500, 9100, 34000, 22500, 29500, 64000, 109000, 61500];
+  const SP500 =      [2140, 2470, 2800, 3000, 3220, 4400, 3900, 4550, 5500, 6280, 7480];
+  const GOLD_USD =   [1340, 1225, 1220, 1400, 1975, 1800, 1765, 1960, 2400, 3300, 4100];
+  const SILVER_USD = [19.5, 16.3, 15.8, 16.3, 19.5, 25.5, 20.3, 24.5, 29.5, 38, 60];
+  const SYDNEY_AUD = [880000, 1075000, 950000, 880000, 1010000, 1360000, 1120000, 1220000, 1420000, 1600000, 1579000];
+  const AUD_PER_USD = [0.75, 0.79, 0.74, 0.70, 0.69, 0.75, 0.69, 0.67, 0.66, 0.65, 0.66]; // approx AUD-per-1-USD each year
+  const ASX200_AUD = [5500, 5720, 6250, 6700, 5900, 7300, 6650, 7300, 7850, 8600, 8750];
+
+  function ratioInBtc(assetSeries, isAudSeries){
+    const btcInSameCurrency = isAudSeries
+      ? BTC_USD.map((usd,i)=> usd / AUD_PER_USD[i]) // convert BTC/USD to BTC/AUD
+      : BTC_USD;
+    return assetSeries.map((v,i)=> v / btcInSameCurrency[i]); // how much BTC this asset costs, each year
+  }
+
+  // slice the last N years and re-index that window to 100 at its own start,
+  // so each range button shows performance for that specific period
+  function sliceAndIndex(ratioSeries, yearsBack){
+    const count = yearsBack + 1; // e.g. 5 years back = 6 data points
+    const ratioSlice = ratioSeries.slice(-count);
+    const yearSlice = YEARS.slice(-count);
+    const base = ratioSlice[0];
+    return { years: yearSlice, values: ratioSlice.map(r => (r/base)*100) };
+  }
+
+  function buildMiniChart(canvasId, sliceData){
+    if(typeof Chart === 'undefined') return null;
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: sliceData.years,
+        datasets: [{
+          data: sliceData.values,
+          borderColor: '#f7931a',
+          backgroundColor: 'rgba(247,147,26,0.08)',
+          fill: true,
+          pointRadius: 0,
+          borderWidth: 1.4,
+          tension: 0.15
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        events: [], // non-interactive - no hover, click, zoom or pan
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9a9ea6', font: { family: 'IBM Plex Mono', size: 9 }, autoSkip: false, maxRotation: 60, minRotation: 60 }
+          },
+          y: {
+            type: 'logarithmic',
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#9a9ea6', font: { family: 'IBM Plex Mono', size: 9 }, callback: v => v + '%' }
+          }
+        },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } }
+      }
+    });
+  }
+
+  function setPct(id, values){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const changePct = values[values.length-1] - 100; // indexed series already starts at 100
+    el.textContent = (changePct >= 0 ? '+' : '') + Math.round(changePct) + '%';
+  }
+
+  const ratioSeriesByKey = {}; // raw BTC-ratio series per asset, computed once
+  const chartsByKey = {};      // live Chart.js instances per asset, for range switching
+
+  function updateRange(key, yearsBack){
+    const sliceData = sliceAndIndex(ratioSeriesByKey[key], yearsBack);
+    const chart = chartsByKey[key];
+    if(chart){
+      chart.data.labels = sliceData.years;
+      chart.data.datasets[0].data = sliceData.values;
+      chart.update('none');
+    }
+    setPct('pct-'+key, sliceData.values);
+  }
+
+  function buildCompareCharts(){
+    if(compareChartsBuilt) return;
+    compareChartsBuilt = true;
+    try{
+      ratioSeriesByKey.sp500 = ratioInBtc(SP500, false);
+      ratioSeriesByKey.gold = ratioInBtc(GOLD_USD, false);
+      ratioSeriesByKey.silver = ratioInBtc(SILVER_USD, false);
+      ratioSeriesByKey.sydney = ratioInBtc(SYDNEY_AUD, true);
+      ratioSeriesByKey.asx200 = ratioInBtc(ASX200_AUD, true);
+
+      Object.keys(ratioSeriesByKey).forEach(key=>{
+        const sliceData = sliceAndIndex(ratioSeriesByKey[key], 10); // default: full 10 years
+        chartsByKey[key] = buildMiniChart('chart-'+key, sliceData);
+        setPct('pct-'+key, sliceData.values);
+      });
+
+      // wire up each card's range buttons
+      document.querySelectorAll('.compare-range-row').forEach(row=>{
+        const key = row.dataset.key;
+        row.querySelectorAll('.range-btn').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            row.querySelectorAll('.range-btn').forEach(b=> b.classList.remove('active'));
+            btn.classList.add('active');
+            updateRange(key, parseInt(btn.dataset.years, 10));
+          });
+        });
+      });
+    }catch(err){ console.error('Comparison charts failed to build:', err); }
+  }
+
+  if(toggle && panel){
+    toggle.addEventListener('click', ()=>{
+      const isOpen = !panel.hidden;
+      panel.hidden = isOpen;
+      toggle.classList.toggle('open', !isOpen);
+      if(!isOpen) buildCompareCharts();
+    });
+  }
+}catch(err){ console.error('Comparison expander setup failed:', err); }
+
 /* ============ Full-history price chart (log scale, via mempool.space) ============ */
 try{
   if(typeof Chart === 'undefined') throw new Error('Chart.js did not load');
@@ -1417,11 +1683,23 @@ try{
       if(points.length === 0) throw new Error('no price points returned');
 
       const ctx = document.getElementById('btc-chart').getContext('2d');
+
+      function filterByYears(yearsBack){
+        const cutoff = Date.now() - yearsBack*365.25*24*3600*1000;
+        return points.filter(p => p.x >= cutoff);
+      }
+
+      function yMaxWithHeadroom(visiblePoints){
+        const maxVisible = Math.max(...visiblePoints.map(p=>p.y));
+        return maxVisible * 1.2; // 20% headroom above the highest visible price
+      }
+
+      const initialPoints = filterByYears(15);
       const chart = new Chart(ctx, {
         type: 'line',
         data: {
           datasets: [{
-            data: points,
+            data: initialPoints,
             borderColor: '#f7931a',
             backgroundColor: 'rgba(247,147,26,0.08)',
             fill: true,
@@ -1433,7 +1711,7 @@ try{
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
+          events: [], // non-interactive - no hover, click, zoom or pan
           scales: {
             x: {
               type: 'time',
@@ -1443,6 +1721,7 @@ try{
             },
             y: {
               type: 'logarithmic',
+              max: yMaxWithHeadroom(initialPoints),
               grid: { color: 'rgba(255,255,255,0.06)' },
               ticks: {
                 color: '#9a9ea6',
@@ -1453,40 +1732,27 @@ try{
           },
           plugins: {
             legend: { display: false },
-            tooltip: {
-              backgroundColor: '#15181e',
-              borderColor: '#23262d',
-              borderWidth: 1,
-              titleFont: { family: 'IBM Plex Mono' },
-              bodyFont: { family: 'IBM Plex Mono' },
-              callbacks: {
-                label: (item)=> '$' + Math.round(item.parsed.y).toLocaleString('en-US')
-              }
-            },
-            zoom: {
-              pan: { enabled: true, mode: 'x', onPanComplete: applyDynamicYHeadroom },
-              zoom: {
-                wheel: { enabled: true },
-                pinch: { enabled: true },
-                mode: 'x',
-                onZoomComplete: applyDynamicYHeadroom
-              }
-            }
+            tooltip: { enabled: false }
           }
         }
       });
 
-      // keeps 20% of headroom above whatever the highest price is in the
-      // currently visible x-range, recalculating every time you zoom or pan
-      function applyDynamicYHeadroom({chart}){
-        const xScale = chart.scales.x;
-        const visible = points.filter(p => p.x >= xScale.min && p.x <= xScale.max);
+      function setChartRange(yearsBack){
+        const visible = filterByYears(yearsBack);
         if(visible.length === 0) return;
-        const maxVisible = Math.max(...visible.map(p=>p.y));
-        chart.options.scales.y.max = maxVisible * 1.2;
+        chart.data.datasets[0].data = visible;
+        chart.options.scales.y.max = yMaxWithHeadroom(visible);
         chart.update('none');
       }
-      applyDynamicYHeadroom({chart});
+
+      const rangeButtons = document.querySelectorAll('#chart-range-row .range-btn');
+      rangeButtons.forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          rangeButtons.forEach(b=> b.classList.remove('active'));
+          btn.classList.add('active');
+          setChartRange(parseInt(btn.dataset.years, 10));
+        });
+      });
     })
     .catch(err=>{
       console.error('Price chart failed to load:', err);
