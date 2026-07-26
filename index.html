@@ -1839,7 +1839,12 @@ function showNoMeetupFound(){
 }
 
 function startCountdownFromEvents(events){
-  const nextSydneyWest = events.find(ev => (ev.title||'').toLowerCase().includes('sydney west'));
+  const now = Date.now();
+  const nextSydneyWest = events.find(ev => {
+    if(!(ev.title||'').toLowerCase().includes('sydney west')) return false;
+    const t = new Date(ev.start).getTime();
+    return !isNaN(t) && t > now; // guard against stale/outdated events.json data
+  });
   if(!nextSydneyWest){ showNoMeetupFound(); return; }
 
   const target = new Date(nextSydneyWest.start).getTime();
