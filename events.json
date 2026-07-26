@@ -1,35 +1,7 @@
 {
   "source": "https://www.meetup.com/Bitcoin_Sydney/events/ical/",
-  "updated": "2026-07-05T22:01:15.077551+00:00",
+  "updated": "2026-07-26T07:01:56.260103+00:00",
   "events": [
-    {
-      "title": "BIG JULY MEETUP",
-      "start": "2026-07-08T18:00:00+10:00",
-      "end": "2026-07-08T21:00:00+10:00",
-      "location": "",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/314812047/"
-    },
-    {
-      "title": "Sydney West Bitcoin - Social - Bella Vista",
-      "start": "2026-07-21T19:00:00+10:00",
-      "end": "2026-07-21T22:00:00+10:00",
-      "location": "Bella Vista Hotel, 13-15 Lexington Drive, Bella Vista NSW 2153",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/315544261/"
-    },
-    {
-      "title": "Bitcoin Northern Beaches - Social - Brookvale",
-      "start": "2026-07-22T18:00:00+10:00",
-      "end": "2026-07-22T21:00:00+10:00",
-      "location": "Noble Craft, Brookvale NSW",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/315544381/"
-    },
-    {
-      "title": "Southern Sydney Bitcoin - Taren Point",
-      "start": "2026-07-23T18:00:00+10:00",
-      "end": "2026-07-23T21:00:00+10:00",
-      "location": "",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/315544428/"
-    },
     {
       "title": "BIG AUGUST MEETUP",
       "start": "2026-08-12T18:00:00+10:00",
@@ -41,7 +13,7 @@
       "title": "Sydney West Bitcoin - Social - Bella Vista",
       "start": "2026-08-25T19:00:00+10:00",
       "end": "2026-08-25T22:00:00+10:00",
-      "location": "Bella Vista Hotel, 13-15 Lexington Drive, Bella Vista NSW 2153",
+      "location": "",
       "url": "https://www.meetup.com/bitcoin_sydney/events/315544215/"
     },
     {
@@ -57,6 +29,34 @@
       "end": "2026-08-27T21:00:00+10:00",
       "location": "",
       "url": "https://www.meetup.com/bitcoin_sydney/events/315544498/"
+    },
+    {
+      "title": "BIG SEPTEMBER MEETUP",
+      "start": "2026-09-09T18:00:00+10:00",
+      "end": "2026-09-09T21:00:00+10:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/315602836/"
+    },
+    {
+      "title": "Sydney West Bitcoin - Social - Bella Vista",
+      "start": "2026-09-22T19:00:00+10:00",
+      "end": "2026-09-22T22:00:00+10:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/315602800/"
+    },
+    {
+      "title": "Bitcoin Northern Beaches - Social - Brookvale",
+      "start": "2026-09-23T18:00:00+10:00",
+      "end": "2026-09-23T21:00:00+10:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/315602808/"
+    },
+    {
+      "title": "Southern Sydney Bitcoin - Taren Point",
+      "start": "2026-09-24T18:00:00+10:00",
+      "end": "2026-09-24T21:00:00+10:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/315602822/"
     }
   ]
 }
