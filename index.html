@@ -879,6 +879,7 @@ function resize(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
   buildNetwork();
   if(typeof setupHeroPosition === 'function') setupHeroPosition();
+  if(typeof onScroll === 'function') onScroll(); // re-centers the hero text immediately, don't wait for the next scroll
 }
 
 let nodes = [], neighborLists = [], liveEdges = [];
@@ -986,6 +987,7 @@ function setupHeroPosition(){
   heroCollapse.style.position = 'fixed';
   heroCollapse.style.left = baseX + 'px';
   heroCollapse.style.top = baseY + 'px';
+  heroCollapse.style.transform = 'translate(-50%,-50%)'; // safe default centering, refined by onScroll below
 
   const tx = window.innerWidth*0.1 + Math.random()*window.innerWidth*0.8;
   const ty = window.innerHeight*0.66 + Math.random()*window.innerHeight*0.06; // ~66% down the screen
