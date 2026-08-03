@@ -1681,18 +1681,22 @@ try{
   }
 }catch(err){ console.error('Comparison expander setup failed:', err); }
 
-/* ============ Full-history price chart (log scale, via mempool.space) ============ */
+/* ============ Full-history price chart (log scale, via local btc-stats.json) ============
+   Reads from a same-origin JSON file kept updated daily by a GitHub Action,
+   rather than calling mempool.space directly from the browser - mempool.space's
+   API has inconsistent CORS support across endpoints, so direct browser calls
+   are unreliable even though the same request works fine server-side. */
 try{
   if(typeof Chart === 'undefined') throw new Error('Chart.js did not load');
 
-  fetch('https://mempool.space/api/v1/historical-price?currency=USD')
-    .then(r=>{ if(!r.ok) throw new Error('historical-price request failed'); return r.json(); })
+  fetch('btc-stats.json', {cache: 'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('btc-stats.json not found'); return r.json(); })
     .then(data=>{
-      const points = (data.prices || [])
+      const points = (data.history || [])
         .filter(p => p.USD && p.USD > 0)
         .map(p => ({ x: p.time*1000, y: p.USD }))
         .sort((a,b)=>a.x-b.x);
-      if(points.length === 0) throw new Error('no price points returned');
+      if(points.length === 0) throw new Error('no price points in btc-stats.json');
 
       const ctx = document.getElementById('btc-chart').getContext('2d');
 
@@ -1805,40 +1809,26 @@ try{
 
   document.getElementById('stat-halving').textContent = formatHalvingCountdown(NEXT_HALVING);
 
-  const now = new Date();
-  const date4y = new Date(now); date4y.setFullYear(now.getFullYear()-4);
-  const date10y = new Date(now); date10y.setFullYear(now.getFullYear()-10);
-  const ts4y = Math.floor(date4y.getTime()/1000);
-  const ts10y = Math.floor(date10y.getTime()/1000);
+  fetch('btc-stats.json', {cache: 'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('btc-stats.json not found'); return r.json(); })
+    .then(data=>{
+      const currentUsd = data.price && data.price.usd;
+      const currentAud = data.price && data.price.aud;
+      if(!currentUsd) throw new Error('no price in btc-stats.json');
 
-  const priceUrl = 'https://mempool.space/api/v1/prices';
-  const hist4yUrl = `https://mempool.space/api/v1/historical-price?currency=USD&timestamp=${ts4y}`;
-  const hist10yUrl = `https://mempool.space/api/v1/historical-price?currency=USD&timestamp=${ts10y}`;
+      document.getElementById('stat-price').innerHTML =
+        `${formatUsd(currentUsd)}<br><span style="font-size:0.6em; color:var(--ink-dim);">${formatAud(currentAud)}</span>`;
 
-  Promise.all([
-    fetch(priceUrl).then(r=>r.json()),
-    fetch(hist4yUrl).then(r=>r.json()),
-    fetch(hist10yUrl).then(r=>r.json())
-  ]).then(([current, hist4y, hist10y])=>{
-    const currentUsd = current.USD;
-    const currentAud = current.AUD;
-    document.getElementById('stat-price').innerHTML =
-      `${formatUsd(currentUsd)}<br><span style="font-size:0.6em; color:var(--ink-dim);">${formatAud(currentAud)}</span>`;
-
-    const price4yAgo = hist4y.prices[0].USD;
-    const price10yAgo = hist10y.prices[0].USD;
-
-    const cagr4y = (Math.pow(currentUsd/price4yAgo, 1/4) - 1) * 100;
-    const cagr10y = (Math.pow(currentUsd/price10yAgo, 1/10) - 1) * 100;
-
-    document.getElementById('stat-cagr-4y').textContent = (cagr4y>=0?'+':'') + cagr4y.toFixed(1) + '%';
-    document.getElementById('stat-cagr-10y').textContent = (cagr10y>=0?'+':'') + cagr10y.toFixed(1) + '%';
-  }).catch(err=>{
-    console.error('BTC stats fetch failed:', err);
-    ['stat-cagr-4y','stat-cagr-10y','stat-price'].forEach(id=>{
-      const el = document.getElementById(id);
-      if(el) el.textContent = 'N/A';
-    });
+      const cagr4y = data.cagr4y;
+      const cagr10y = data.cagr10y;
+      document.getElementById('stat-cagr-4y').textContent = (cagr4y == null) ? 'N/A' : (cagr4y>=0?'+':'') + cagr4y.toFixed(1) + '%';
+      document.getElementById('stat-cagr-10y').textContent = (cagr10y == null) ? 'N/A' : (cagr10y>=0?'+':'') + cagr10y.toFixed(1) + '%';
+    }).catch(err=>{
+      console.error('BTC stats fetch failed:', err);
+      ['stat-cagr-4y','stat-cagr-10y','stat-price'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.textContent = 'N/A';
+      });
   });
 }catch(err){ console.error('BTC stats setup failed:', err); }
 
