@@ -1,15 +1,16 @@
-name: Update Meetup events
+name: Update Meetup events and BTC stats
 
 on:
   schedule:
+    # Runs once a day at 03:00 UTC (~1-2pm Sydney time, depending on DST)
     - cron: '0 3 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab too
 
 permissions:
-  contents: write
+  contents: write # allows this workflow to commit updated files back to the repo
 
 jobs:
-  update-events:
+  update-data:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
@@ -23,10 +24,13 @@ jobs:
       - name: Fetch Meetup events and build events.json
         run: python3 build_events.py
 
-      - name: Commit updated events.json (if changed)
+      - name: Fetch BTC price/history and build btc-stats.json
+        run: python3 build_btc_stats.py
+
+      - name: Commit updated files (if changed)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add events.json
-          git diff --staged --quiet || git commit -m "Update upcoming events from Meetup"
+          git add events.json btc-stats.json
+          git diff --staged --quiet || git commit -m "Update events and BTC stats"
           git push
