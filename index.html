@@ -367,6 +367,14 @@
     .compare-grid{ grid-template-columns:1fr; }
   }
 
+  .chart-header{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.85rem;
+    color:var(--ink-dim);
+    text-align:center;
+    max-width:44rem;
+    margin:0 auto 0.8rem;
+  }
   .chart-wrap{
     width:100%;
     max-width:44rem;
@@ -661,6 +669,7 @@
 
   <section id="btc-stats">
     <div class="eyebrow" style="justify-content:center;">Stats</div>
+    <div class="chart-header">BTC <span class="compare-pct" id="chart-pct">—</span></div>
     <div class="chart-wrap" style="margin-bottom:1rem;">
       <canvas id="btc-chart"></canvas>
     </div>
@@ -1710,6 +1719,13 @@ try{
         return maxVisible * 1.2; // 20% headroom above the highest visible price
       }
 
+      function updateChartPct(visiblePoints){
+        const el = document.getElementById('chart-pct');
+        if(!el || visiblePoints.length < 2) return;
+        const change = (visiblePoints[visiblePoints.length-1].y / visiblePoints[0].y - 1) * 100;
+        el.textContent = (change >= 0 ? '+' : '') + change.toFixed(1) + '%';
+      }
+
       const initialPoints = filterByYears(15);
       const chart = new Chart(ctx, {
         type: 'line',
@@ -1752,6 +1768,7 @@ try{
           }
         }
       });
+      updateChartPct(initialPoints);
 
       function setChartRange(yearsBack){
         const visible = filterByYears(yearsBack);
@@ -1759,6 +1776,7 @@ try{
         chart.data.datasets[0].data = visible;
         chart.options.scales.y.max = yMaxWithHeadroom(visible);
         chart.update('none');
+        updateChartPct(visible);
       }
 
       const rangeButtons = document.querySelectorAll('#chart-range-row .range-btn');
