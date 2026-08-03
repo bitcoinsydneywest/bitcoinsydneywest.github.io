@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entropy Fairness Tracker — Bitcoin Sydney West</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D0F0E;
+    --panel: #151816;
+    --panel-2: #1B1F1C;
+    --border: #2A2E2A;
+    --text: #F5F3EE;
+    --text-dim: #8A8880;
+    --orange: #F7931A;
+    --pine: #3A6B52;
+    --pine-bright: #4FA378;
+    --brick: #8B3A3A;
+    --brick-bright: #C25454;
+    --stone: #6B6862;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+  h1 span { color: var(--orange); }
+  .sub { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  .mode-toggle { display: flex; gap: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px; }
+  .mode-btn { background: transparent; border: none; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 8px 14px; border-radius: 6px; cursor: pointer; transition: all .15s; }
+  .mode-btn.active { background: var(--orange); color: #1a1200; font-weight: 700; }
+  .mode-btn:not(.active):hover { color: var(--text); background: var(--panel-2); }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+  @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+
+  .keypad { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  .keypad.digits { grid-template-columns: repeat(5, 1fr); }
+  .keypad.six { grid-template-columns: repeat(3, 1fr); }
+  .key {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 18px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform .08s, background .15s, border-color .15s;
+    user-select: none;
+  }
+  .keypad.digits .key { font-size: 18px; padding: 14px 0; }
+  .key:hover { border-color: var(--orange); }
+  .key:active, .key.flash { transform: scale(0.93); background: var(--orange); color: #1a1200; border-color: var(--orange); }
+  .key .hint { display: block; font-size: 10px; font-weight: 400; color: var(--text-dim); margin-top: 4px; }
+  .key:active .hint, .key.flash .hint { color: #1a1200; opacity: 0.7; }
+
+  .kbd-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin-bottom: 18px; flex-wrap: wrap; }
+  .kbd { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  .stat-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .stat { flex: 1; background: var(--panel-2); border-radius: 8px; padding: 10px 12px; }
+  .stat .label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat .val { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; margin-top: 2px; }
+
+  .actions { display: flex; gap: 8px; }
+  .btn-secondary {
+    flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 10px; border-radius: 8px; cursor: pointer;
+  }
+  .btn-secondary:hover { border-color: var(--brick-bright); color: var(--brick-bright); }
+
+  .chart-area { position: relative; height: 260px; margin-bottom: 20px; }
+
+  .gauge-wrap { display: flex; align-items: center; gap: 24px; padding-top: 4px; }
+  .gauge-svg { flex-shrink: 0; }
+  .verdict-block { flex: 1; }
+  .verdict-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .verdict-text { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; }
+  .verdict-text.pass { color: var(--pine-bright); }
+  .verdict-text.fail { color: var(--brick-bright); }
+  .verdict-text.pending { color: var(--stone); }
+  .verdict-detail { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.5; }
+
+  .die-selector { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .die-tab {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  }
+  .die-tab.active { border-color: var(--orange); color: var(--orange); }
+  .die-tab .n { font-weight: 700; }
+
+  .die-type-toggle { display: flex; gap: 6px; margin-bottom: 12px; }
+  .die-type-btn {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; padding: 10px; border-radius: 8px; cursor: pointer;
+  }
+  .die-type-btn.active { background: var(--orange); color: #1a1200; border-color: var(--orange); }
+  .die-type-btn:not(.active):hover { border-color: var(--orange); color: var(--text); }
+
+  footer { margin-top: 20px; font-size: 11px; color: var(--text-dim); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Entropy <span>fairness</span> tracker</h1>
+      <div class="sub">Tap or press keys to log rolls/flips. Saved to this browser automatically. &middot; <a href="index.html" style="color:var(--text-dim);">&larr; Back to Bitcoin Sydney West</a></div>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="coin">Coin</button>
+      <button class="mode-btn" data-mode="dice">Dice</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+
+      <div id="dieTypeToggle" class="die-type-toggle" style="display:none;">
+        <button class="die-type-btn active" data-dietype="d10">d10 (0&ndash;9)</button>
+        <button class="die-type-btn" data-dietype="d6">d6 (1&ndash;6)</button>
+      </div>
+
+      <div id="dieSelector" class="die-selector" style="display:none;"></div>
+
+      <div id="keypadCoin" class="keypad">
+        <button class="key" data-val="1">H<span class="hint">key H / 1</span></button>
+        <button class="key" data-val="0">T<span class="hint">key T / 0</span></button>
+      </div>
+
+      <div id="keypadDice" class="keypad digits" style="display:none;"></div>
+
+      <div class="kbd-row">
+        <span>Keys:</span>
+        <span id="keyHintText">H / T or 0 / 1</span>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">
+          <div class="label">Total logged</div>
+          <div class="val mono" id="totalCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Toward 100</div>
+          <div class="val mono" id="progressPct">0%</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" id="undoBtn">Undo last</button>
+        <button class="btn-secondary" id="resetBtn">Reset this die</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="chart-area">
+        <canvas id="barChart" role="img" aria-label="Bar chart of observed roll or flip counts per face, compared to expected fair distribution"></canvas>
+      </div>
+
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" width="120" height="70" viewBox="0 0 120 70" role="img" aria-label="Confidence gauge showing chi-squared fairness test progress">
+          <path d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke="#2A2E2A" stroke-width="10" stroke-linecap="round"/>
+          <path id="gaugeArc" d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke="#6B6862" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 400"/>
+          <circle id="gaugeNeedleTip" cx="60" cy="65" r="4" fill="#F5F3EE"/>
+        </svg>
+        <div class="verdict-block">
+          <div class="verdict-label">Chi-squared verdict</div>
+          <div class="verdict-text pending" id="verdictText">Collecting data</div>
+          <div class="verdict-detail" id="verdictDetail">Log at least 100 rolls or flips for a meaningful read.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Bitcoin Sydney West — self-sovereign seed generation reference. Data stays in this browser only.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function() {
+  const STORAGE_KEY = 'bsw_entropy_tracker_v1';
+  const ORANGE = '#F7931A';
+  const PINE = '#4FA378';
+  const BRICK = '#C25454';
+  const STONE = '#6B6862';
+  const TEXT_DIM = '#8A8880';
+
+  let state = loadState();
+
+  function defaultState() {
+    return {
+      mode: 'coin',
+      activeDieType: 'd10',
+      activeDie: 1,
+      coin: [0, 0],
+      dice: {
+        d10: { 1: new Array(10).fill(0), 2: new Array(10).fill(0), 3: new Array(10).fill(0), 4: new Array(10).fill(0) },
+        d6:  { 1: new Array(6).fill(0),  2: new Array(6).fill(0),  3: new Array(6).fill(0),  4: new Array(6).fill(0) }
+      },
+      history: {
+        coin: [],
+        dice: {
+          d10: { 1: [], 2: [], 3: [], 4: [] },
+          d6:  { 1: [], 2: [], 3: [], 4: [] }
+        }
+      }
+    };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      const d = defaultState();
+
+      // migrate old (pre-d6) saved data, where dice/history.dice were flat
+      // objects keyed 1-4 directly rather than nested under d10/d6
+      let dice = parsed.dice || d.dice;
+      if (dice && !dice.d10 && !dice.d6) {
+        dice = { d10: dice, d6: d.dice.d6 };
+      }
+      let history = parsed.history || d.history;
+      if (history && history.dice && !history.dice.d10 && !history.dice.d6) {
+        history = { coin: history.coin || [], dice: { d10: history.dice, d6: d.history.dice.d6 } };
+      }
+
+      return Object.assign(d, parsed, {
+        coin: parsed.coin || d.coin,
+        activeDieType: parsed.activeDieType || d.activeDieType,
+        dice: dice,
+        history: history
+      });
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function chiSquared(counts) {
+    const total = counts.reduce((a, b) => a + b, 0);
+    if (total === 0) return { chi: 0, total: 0 };
+    const expected = total / counts.length;
+    let chi = 0;
+    for (const c of counts) chi += Math.pow(c - expected, 2) / expected;
+    return { chi, total };
+  }
+
+  const CRITICAL = { 2: 3.84, 6: 11.07, 10: 16.92 };
+
+  let chart = null;
+
+  function currentCounts() {
+    if (state.mode === 'coin') return state.coin;
+    return state.dice[state.activeDieType][state.activeDie];
+  }
+
+  function currentHistory() {
+    if (state.mode === 'coin') return state.history.coin;
+    return state.history.dice[state.activeDieType][state.activeDie];
+  }
+
+  function faceLabels() {
+    if (state.mode === 'coin') return ['1 (H)', '0 (T)'];
+    if (state.activeDieType === 'd6') return ['1','2','3','4','5','6'];
+    return Array.from({length:10}, (_,i) => String(i));
+  }
+
+  function log(faceIndex) {
+    const counts = currentCounts();
+    counts[faceIndex]++;
+    currentHistory().push(faceIndex);
+    saveState();
+    render();
+    flashKey(faceIndex);
+  }
+
+  function undo() {
+    const hist = currentHistory();
+    if (hist.length === 0) return;
+    const last = hist.pop();
+    currentCounts()[last]--;
+    saveState();
+    render();
+  }
+
+  function resetCurrent() {
+    if (state.mode === 'coin') {
+      state.coin = [0, 0];
+      state.history.coin = [];
+    } else {
+      const size = state.activeDieType === 'd6' ? 6 : 10;
+      state.dice[state.activeDieType][state.activeDie] = new Array(size).fill(0);
+      state.history.dice[state.activeDieType][state.activeDie] = [];
+    }
+    saveState();
+    render();
+  }
+
+  function flashKey(faceIndex) {
+    const sel = state.mode === 'coin'
+      ? `#keypadCoin .key[data-val="${faceIndex}"]`
+      : `#keypadDice .key[data-val="${faceIndex}"]`;
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 140);
+  }
+
+  function buildDiceKeypad() {
+    const kp = document.getElementById('keypadDice');
+    kp.innerHTML = '';
+    const size = state.activeDieType === 'd6' ? 6 : 10;
+    kp.className = state.activeDieType === 'd6' ? 'keypad six' : 'keypad digits';
+    for (let i = 0; i < size; i++) {
+      const displayVal = state.activeDieType === 'd6' ? (i + 1) : i; // d6 shows 1-6, d10 shows 0-9
+      const btn = document.createElement('button');
+      btn.className = 'key';
+      btn.dataset.val = i; // internal array index, always 0-based
+      btn.innerHTML = displayVal + '<span class="hint">key ' + displayVal + '</span>';
+      btn.addEventListener('click', () => log(i));
+      kp.appendChild(btn);
+    }
+  }
+
+  function buildDieTypeToggle() {
+    document.querySelectorAll('.die-type-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.dietype === state.activeDieType);
+    });
+  }
+
+  function buildDieSelector() {
+    const wrap = document.getElementById('dieSelector');
+    wrap.innerHTML = '';
+    for (let d = 1; d <= 4; d++) {
+      const btn = document.createElement('button');
+      btn.className = 'die-tab' + (d === state.activeDie ? ' active' : '');
+      btn.innerHTML = 'Die <span class="n">' + d + '</span>';
+      btn.addEventListener('click', () => {
+        state.activeDie = d;
+        saveState();
+        render();
+      });
+      wrap.appendChild(btn);
+    }
+  }
+
+  function updateGauge(chi, total, critical) {
+    const arc = document.getElementById('gaugeArc');
+    const arcLength = 157; // approx path length for this arc geometry
+    let pct, color;
+    if (total < 100) {
+      pct = total / 100;
+      color = STONE;
+    } else {
+      pct = Math.min(chi / critical, 1);
+      color = chi <= critical ? PINE : BRICK;
+    }
+    arc.setAttribute('stroke', color);
+    arc.setAttribute('stroke-dasharray', (pct * arcLength) + ' ' + arcLength);
+
+    const verdictEl = document.getElementById('verdictText');
+    const detailEl = document.getElementById('verdictDetail');
+    const unit = state.mode === 'coin' ? 'flips' : 'rolls';
+
+    if (total < 100) {
+      verdictEl.textContent = 'Collecting data';
+      verdictEl.className = 'verdict-text pending';
+      detailEl.textContent = `${total} of 100 minimum ${unit} logged.`;
+    } else if (chi <= critical) {
+      verdictEl.textContent = 'Pass — looks fair';
+      verdictEl.className = 'verdict-text pass';
+      detailEl.textContent = `Chi-squared ${chi.toFixed(2)}, under threshold ${critical}. ${total} ${unit} logged.`;
+    } else {
+      verdictEl.textContent = 'Fail — likely biased';
+      verdictEl.className = 'verdict-text fail';
+      detailEl.textContent = `Chi-squared ${chi.toFixed(2)}, over threshold ${critical}. Consider replacing this ${state.mode === 'coin' ? 'coin' : 'die'}.`;
+    }
+  }
+
+  function render() {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === state.mode));
+
+    document.getElementById('dieTypeToggle').style.display = state.mode === 'dice' ? 'flex' : 'none';
+    document.getElementById('dieSelector').style.display = state.mode === 'dice' ? 'flex' : 'none';
+    document.getElementById('keypadCoin').style.display = state.mode === 'coin' ? 'grid' : 'none';
+    document.getElementById('keypadDice').style.display = state.mode === 'dice' ? 'grid' : 'none';
+
+    if (state.mode === 'dice') {
+      buildDieTypeToggle();
+      buildDiceKeypad();
+      document.getElementById('keyHintText').textContent = state.activeDieType === 'd6' ? '1 through 6' : '0 through 9';
+    } else {
+      document.getElementById('keyHintText').textContent = 'H / T or 0 / 1';
+    }
+
+    if (state.mode === 'dice') buildDieSelector();
+
+    const counts = currentCounts();
+    const total = counts.reduce((a, b) => a + b, 0);
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('progressPct').textContent = Math.min(Math.round((total / 100) * 100), 100) + '%';
+
+    const { chi } = chiSquared(counts);
+    const critical = CRITICAL[counts.length];
+    updateGauge(chi, total, critical);
+
+    renderChart();
+  }
+
+  function renderChart() {
+    const counts = currentCounts();
+    const labels = faceLabels();
+    const expected = counts.reduce((a, b) => a + b, 0) / counts.length;
+
+    const ctx = document.getElementById('barChart');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Observed',
+            data: counts,
+            backgroundColor: ORANGE,
+            borderRadius: 4,
+            barPercentage: 0.7
+          },
+          {
+            label: 'Expected (fair)',
+            data: labels.map(() => expected),
+            type: 'line',
+            borderColor: TEXT_DIM,
+            borderDash: [4, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: TEXT_DIM, font: { family: 'JetBrains Mono', size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: TEXT_DIM, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#2A2E2A' } }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.mode = btn.dataset.mode;
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll('#keypadCoin .key').forEach(btn => {
+    btn.addEventListener('click', () => log(parseInt(btn.dataset.val, 10)));
+  });
+
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset all logged data for this ' + (state.mode === 'coin' ? 'coin' : 'die') + '?')) resetCurrent();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (state.mode === 'coin') {
+      if (k === 'h' || k === '1') { log(1); return; }
+      if (k === 't' || k === '0') { log(0); return; }
+    } else if (k >= '1' && k <= '4' && e.shiftKey) {
+      state.activeDie = parseInt(k, 10);
+      saveState();
+      render();
+      return;
+    } else if (state.activeDieType === 'd6') {
+      if (/^[1-6]$/.test(k)) { log(parseInt(k, 10) - 1); return; } // key "1"-"6" -> index 0-5
+    } else {
+      if (/^[0-9]$/.test(k)) { log(parseInt(k, 10)); return; }
+    }
+    if (k === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+  });
+
+  document.querySelectorAll('.die-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.activeDieType = btn.dataset.dietype;
+      saveState();
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
