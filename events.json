@@ -1,20 +1,20 @@
 {
   "source": "https://www.meetup.com/Bitcoin_Sydney/events/ical/",
-  "updated": "2026-09-23T08:10:01.502527+00:00",
+  "updated": "2026-09-24T08:01:02.240041+00:00",
   "events": [
-    {
-      "title": "Southern Sydney Bitcoin - Taren Point",
-      "start": "2026-09-24T18:00:00+10:00",
-      "end": "2026-09-24T21:00:00+10:00",
-      "location": "",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/315602822/"
-    },
     {
       "title": "BIG OCTOBER MEETUP",
       "start": "2026-10-14T18:00:00+11:00",
       "end": "2026-10-14T21:00:00+11:00",
       "location": "",
       "url": "https://www.meetup.com/bitcoin_sydney/events/316594391/"
+    },
+    {
+      "title": "Bitcoin Eastern Suburbs - Social - Coogee",
+      "start": "2026-10-21T18:00:00+11:00",
+      "end": "2026-10-21T21:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/316593230/"
     },
     {
       "title": "Southern Sydney Bitcoin - Taren Point",
@@ -36,6 +36,34 @@
       "end": "2026-10-28T21:00:00+11:00",
       "location": "",
       "url": "https://www.meetup.com/bitcoin_sydney/events/316594488/"
+    },
+    {
+      "title": "BIG NOVEMBER MEETUP",
+      "start": "2026-11-11T18:00:00+11:00",
+      "end": "2026-11-11T21:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/316685502/"
+    },
+    {
+      "title": "Bitcoin Eastern Suburbs - Social - Coogee",
+      "start": "2026-11-18T18:00:00+11:00",
+      "end": "2026-11-18T21:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/316685519/"
+    },
+    {
+      "title": "Sydney West Bitcoin - Social - Bella Vista",
+      "start": "2026-11-24T19:00:00+11:00",
+      "end": "2026-11-24T22:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/316685543/"
+    },
+    {
+      "title": "Bitcoin Northern Beaches - Social - Brookvale",
+      "start": "2026-11-25T18:00:00+11:00",
+      "end": "2026-11-25T21:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/316685562/"
     }
   ]
 }
