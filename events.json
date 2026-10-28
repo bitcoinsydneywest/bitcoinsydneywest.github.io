@@ -1,14 +1,7 @@
 {
   "source": "https://www.meetup.com/Bitcoin_Sydney/events/ical/",
-  "updated": "2026-10-27T08:32:40.822444+00:00",
+  "updated": "2026-10-28T09:11:12.999631+00:00",
   "events": [
-    {
-      "title": "Bitcoin Northern Beaches - Social - Brookvale",
-      "start": "2026-10-28T18:00:00+11:00",
-      "end": "2026-10-28T21:00:00+11:00",
-      "location": "",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/316594488/"
-    },
     {
       "title": "Southern Sydney Bitcoin - Taren Point",
       "start": "2026-10-29T18:00:00+11:00",
@@ -64,6 +57,13 @@
       "end": "2027-01-26T22:00:00+11:00",
       "location": "",
       "url": "https://www.meetup.com/bitcoin_sydney/events/317080522/"
+    },
+    {
+      "title": "Bitcoin Northern Beaches - Social - Brookvale",
+      "start": "2027-01-27T18:00:00+11:00",
+      "end": "2027-01-27T21:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/317080579/"
     }
   ]
 }
