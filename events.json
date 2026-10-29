@@ -1,14 +1,7 @@
 {
   "source": "https://www.meetup.com/Bitcoin_Sydney/events/ical/",
-  "updated": "2026-10-28T09:11:12.999631+00:00",
+  "updated": "2026-10-29T09:10:59.494521+00:00",
   "events": [
-    {
-      "title": "Southern Sydney Bitcoin - Taren Point",
-      "start": "2026-10-29T18:00:00+11:00",
-      "end": "2026-10-29T21:00:00+11:00",
-      "location": "",
-      "url": "https://www.meetup.com/bitcoin_sydney/events/316594504/"
-    },
     {
       "title": "BIG NOVEMBER MEETUP",
       "start": "2026-11-11T18:00:00+11:00",
@@ -64,6 +57,13 @@
       "end": "2027-01-27T21:00:00+11:00",
       "location": "",
       "url": "https://www.meetup.com/bitcoin_sydney/events/317080579/"
+    },
+    {
+      "title": "Southern Sydney Bitcoin - Taren Point",
+      "start": "2027-01-28T18:00:00+11:00",
+      "end": "2027-01-28T21:00:00+11:00",
+      "location": "",
+      "url": "https://www.meetup.com/bitcoin_sydney/events/317080655/"
     }
   ]
 }
